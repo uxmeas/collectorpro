@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { users, verificationTokens } from '../../../../lib/data';
+import { sendVerificationEmail } from '../../../../lib/email';
 
 // In-memory user store (replace with DB later)
 interface User {
@@ -21,13 +22,7 @@ function generateVerificationToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
-// Send verification email (placeholder for now)
-function sendVerificationEmail(email: string, token: string): void {
-  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${token}`;
-  console.log(`📧 Verification email would be sent to ${email}`);
-  console.log(`🔗 Verification URL: ${verificationUrl}`);
-  // TODO: Integrate with real email service (SendGrid, AWS SES, etc.)
-}
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -70,7 +65,7 @@ export async function POST(req: NextRequest) {
       expires: tokenExpires.getTime(),
     };
     // Send verification email
-    sendVerificationEmail(email, verificationToken);
+    await sendVerificationEmail(email, verificationToken);
     // Return success message
     return NextResponse.json({
       success: true,
