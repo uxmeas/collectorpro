@@ -70,10 +70,8 @@ export default function DashboardPage() {
             const walletData = await walletRes.json();
             setDapperWallet(walletData.dapperWallet || "");
             
-            // If wallet is connected, fetch real data
-            if (walletData.dapperWallet) {
-              await fetchDapperData(walletData.dapperWallet);
-            }
+            // Don't automatically fetch data - let user connect manually with credentials
+            // This prevents the "No moments found" issue when loading saved wallet addresses
           }
         }
 
@@ -261,7 +259,7 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Wallet Connection */}
-        {!dapperWallet && (
+        {!dapperWallet ? (
           <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-[#23272A] mb-8">
             <h2 className="text-2xl font-bold text-white mb-4">Connect Your Dapper Wallet</h2>
             <p className="text-gray-300 mb-6">
@@ -334,6 +332,61 @@ export default function DashboardPage() {
               >
                 {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
                 {connecting ? "Connecting..." : "Connect Wallet"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-[#23272A] mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-white">Connected Wallet</h2>
+                <p className="text-gray-400 text-sm">{dapperWallet}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setDapperWallet("");
+                  setDapperEmail("");
+                  setDapperPassword("");
+                  setMoments([]);
+                  setPortfolio(null);
+                  setError("");
+                }}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                Disconnect
+              </button>
+            </div>
+            <p className="text-gray-300 text-sm">
+              Your wallet is connected. Enter your Dapper credentials below to view your moments.
+            </p>
+            
+            {/* Reconnection Form */}
+            <div className="mt-4 space-y-4">
+              <div>
+                <input
+                  type="email"
+                  value={dapperEmail}
+                  onChange={(e) => setDapperEmail(e.target.value)}
+                  placeholder="Your Dapper account email"
+                  className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
+                />
+              </div>
+              <div>
+                <input
+                  type="password"
+                  value={dapperPassword}
+                  onChange={(e) => setDapperPassword(e.target.value)}
+                  placeholder="Your Dapper account password"
+                  className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
+                />
+              </div>
+              <button
+                onClick={() => fetchDapperData(dapperWallet, dapperEmail, dapperPassword)}
+                disabled={connecting || !dapperEmail || !dapperPassword}
+                className="w-full bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
+              >
+                {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
+                {connecting ? "Connecting..." : "Load Moments"}
               </button>
             </div>
           </div>
