@@ -1,0 +1,137 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client [object Object]provider =prisma-client-js
+}
+
+datasource db {
+  provider = postgresql  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String
+  firstName         String?
+  lastName          String?
+  dapperWalletAddress String?
+  tier              UserTier  @default(FREE)
+  
+  // Security fields
+  emailVerified     DateTime?
+  failedLoginAttempts Int     @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  passwordChangedAt DateTime  @default(now())
+  
+  // Session management
+  refreshTokens     RefreshToken[]
+  
+  // Portfolio data
+  moments           Moment[]
+  transactions      Transaction[]
+  
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+  
+  // GDPR compliance
+  dataExportRequested Boolean @default(false)
+  dataDeleted        Boolean  @default(false)
+  
+  @@map("users")
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  revokedAt   DateTime?
+  ipAddress   String?
+  userAgent   String?
+  
+  @@map(refresh_tokens)}
+
+model Moment {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  momentId          String   // NBA Top Shot moment ID
+  playerName        String
+  teamName          String
+  playCategory      String
+  playType          String
+  rarity            Rarity
+  serialNumber      Int
+  totalCirculation  Int
+  acquisitionPrice  Float?
+  currentValue      Float?
+  acquisitionDate   DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([userId, momentId])
+  @@map("moments")
+}
+
+model Transaction {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionHash   String   @unique
+  momentId          String
+  type              TransactionType
+  price             Float
+  quantity          Int
+  timestamp         DateTime
+  createdAt         DateTime @default(now())
+  
+  @@map("transactions")
+}
+
+model RateLimit {
+  id          String   @id @default(cuid())
+  identifier  String   // IP address or user ID
+  endpoint    String
+  count       Int      @default(1)
+  windowStart DateTime @default(now())
+  
+  @@unique([identifier, endpoint, windowStart])
+  @@map(rate_limits")
+}
+
+model SecurityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String   // LOGIN_ATTEMPT, PASSWORD_CHANGE, etc.
+  ipAddress   String
+  userAgent   String?
+  success     Boolean
+  details     String?  // JSON string with additional details
+  createdAt   DateTime @default(now())
+  
+  @@map("security_logs")
+}
+
+enum UserTier {
+  FREE
+  PREMIUM
+}
+
+enum Rarity {
+  COMMON
+  RARE
+  LEGENDARY
+  ULTIMATE
+}
+
+enum TransactionType {
+  PURCHASE
+  SALE
+  TRANSFER_IN
+  TRANSFER_OUT
+} 

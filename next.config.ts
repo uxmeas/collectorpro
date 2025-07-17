@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  poweredByHeader: false,
+  compress: true,
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client'],
+  },
 };
 
-export default nextConfig;
+export default nextConfig; 

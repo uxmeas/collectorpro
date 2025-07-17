@@ -1,103 +1,96 @@
-import Image from "next/image";
+'use client'
+
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
+  const router = useRouter()
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen bg-gradient-to-br from-[#1D428A] to-[#181A1B] font-[Inter,sans-serif] text-white relative overflow-x-hidden">
+      {/* Subtle basketball court pattern background */}
+      <div className="absolute inset-0 pointer-events-none z-0" style={{background: 'url("/court-pattern.svg") repeat', opacity: 0.08}} />
+      {/* Header */}
+      <header className="relative z-10 bg-black/70 backdrop-blur-md border-b border-[#222]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-6">
+          <div className="flex items-center gap-3">
+            {/* Logo: basketball + chart */}
+            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-[#C8102E] to-[#1D428A] mr-2">
+              <span className="text-2xl">🏀</span>
+              <span className="text-xl -ml-2">📊</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">TS Tracker Pro</h1>
+          </div>
+          <button
+            className="bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-6 py-2 rounded-full font-semibold text-lg shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
+            onClick={() => router.push('/login')}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Connect Your Collection
+          </button>
+        </div>
+      </header>
+      {/* Tagline & Disclaimer */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 flex flex-col sm:flex-row sm:justify-between items-center text-xs text-gray-400">
+        <span className="font-semibold">Unofficial portfolio analytics for NBA Top Shot collectors</span>
+        <span className="mt-2 sm:mt-0">Not affiliated with NBA Top Shot or Dapper Labs</span>
+      </div>
+      {/* Hero Section */}
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex flex-col items-center text-center">
+        <h2 className="text-4xl sm:text-5xl font-extrabold mb-6 tracking-tight text-white">
+          Advanced Portfolio Analytics for <span className="text-[#FDB927]">NBA Top Shot</span> Collectors
+        </h2>
+        <p className="text-lg sm:text-xl text-gray-200 mb-10 max-w-2xl mx-auto">
+          Track your collection, analyze trends, and unlock deep insights with the most trusted analytics platform for NBA Top Shot.
+        </p>
+        <button
+          className="bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-10 py-4 rounded-full font-bold text-xl shadow-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#FDB927] mb-8"
+          onClick={() => router.push('/login')}
+        >
+          Connect Your Collection
+        </button>
+        {/* Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8 w-full">
+          <div className="bg-[#23272A]/80 rounded-xl p-6 border border-[#333] shadow-md flex flex-col items-center">
+            <span className="text-3xl mb-3">📈</span>
+            <h3 className="text-lg font-bold text-white mb-2">Track Performance</h3>
+            <p className="text-gray-300">Monitor your portfolio value, moment prices, and sales history in real time.</p>
+          </div>
+          <div className="bg-[#23272A]/80 rounded-xl p-6 border border-[#333] shadow-md flex flex-col items-center">
+            <span className="text-3xl mb-3">📊</span>
+            <h3 className="text-lg font-bold text-white mb-2">Analyze Trends</h3>
+            <p className="text-gray-300">Visualize market trends, player performance, and collection growth with pro charts.</p>
+          </div>
+          <div className="bg-[#23272A]/80 rounded-xl p-6 border border-[#333] shadow-md flex flex-col items-center">
+            <span className="text-3xl mb-3">💎</span>
+            <h3 className="text-lg font-bold text-white mb-2">Portfolio Insights</h3>
+            <p className="text-gray-300">Get advanced stats, rarity breakdowns, and actionable insights for your collection.</p>
+          </div>
+        </div>
+        {/* Testimonials */}
+        <div className="mt-16 w-full max-w-3xl mx-auto">
+          <h4 className="text-xl font-bold text-white mb-6">What Collectors Are Saying</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-[#181A1B]/80 rounded-lg p-5 border border-[#333] shadow flex flex-col">
+              <span className="text-lg text-[#FDB927] font-bold mb-2">“TS Tracker Pro is my go-to for tracking my Top Shot investments.”</span>
+              <span className="text-gray-300 mt-2">— @hoopfanatic</span>
+            </div>
+            <div className="bg-[#181A1B]/80 rounded-lg p-5 border border-[#333] shadow flex flex-col">
+              <span className="text-lg text-[#FDB927] font-bold mb-2">“The analytics and charts are next-level. I feel like a pro trader.”</span>
+              <span className="text-gray-300 mt-2">— @momentmaven</span>
+            </div>
+            <div className="bg-[#181A1B]/80 rounded-lg p-5 border border-[#333] shadow flex flex-col">
+              <span className="text-lg text-[#FDB927] font-bold mb-2">“Finally, a dashboard that makes sense for serious collectors.”</span>
+              <span className="text-gray-300 mt-2">— @courtvision</span>
+            </div>
+            <div className="bg-[#181A1B]/80 rounded-lg p-5 border border-[#333] shadow flex flex-col">
+              <span className="text-lg text-[#FDB927] font-bold mb-2">“I trust TS Tracker Pro to keep my collection stats on point.”</span>
+              <span className="text-gray-300 mt-2">— @legendaryhoops</span>
+            </div>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap');
+        html { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+      `}</style>
     </div>
-  );
+  )
 }
