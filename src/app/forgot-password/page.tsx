@@ -85,7 +85,7 @@ export default function ForgotPasswordPage() {
           <div className="text-center animate-fade-in">
             <div className="text-green-400 text-lg mb-4">✅ Reset email sent!</div>
             <p className="text-gray-300 text-sm mb-6">
-              Check your email for a password reset link. If you don't see it, check your spam folder.
+              Check your email for a password reset link. If you don&apos;t see it, check your spam folder.
             </p>
             <div className="text-gray-400 text-xs">Redirecting to login...</div>
           </div>

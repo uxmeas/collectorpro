@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Find user
-    const user = users.find((u: any) => u.email === resetRecord.email);
+    const user = users.find((u: { email: string }) => u.email === resetRecord.email);
     
     if (!user) {
       delete passwordResetTokens[token];
