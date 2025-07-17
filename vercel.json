@@ -11,5 +11,7 @@
   },
   "env": {
     "NODE_ENV": "production"
-  }
+  },
+  "public": true,
+  "passwordProtection": false
 } 
