@@ -42,9 +42,13 @@ export class DapperOAuth {
       response_type: 'code',
       scope: this.config.scope.join(' '),
       state: state,
+      email: email, // Include email for demo OAuth
     });
 
-    return `https://oauth.dapperlabs.com/authorize?${params.toString()}`;
+    // Note: Dapper Labs doesn't have a public OAuth service
+    // This is a demo implementation that simulates OAuth flow
+    // In production, you would integrate with Dapper's actual API
+    return `https://collectorpro.vercel.app/api/dapper/oauth/demo?${params.toString()}`;
   }
 
   // Handle OAuth callback
@@ -259,8 +263,8 @@ export class DapperOAuth {
 
 // Initialize OAuth with configuration
 export const dapperOAuth = new DapperOAuth({
-  clientId: process.env.DAPPER_CLIENT_ID || 'your-client-id',
-  clientSecret: process.env.DAPPER_CLIENT_SECRET || 'your-client-secret',
-  redirectUri: `${process.env.APP_URL || 'http://localhost:3000'}/api/dapper/oauth/callback`,
-  scope: ['nbatopshot:read', 'profile:read'],
+  clientId: process.env.DAPPER_CLIENT_ID || 'demo-client-id',
+  clientSecret: process.env.DAPPER_CLIENT_SECRET || 'demo-client-secret',
+  redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || 'https://collectorpro.vercel.app'}/api/dapper/oauth/demo`,
+  scope: ['read:user', 'read:wallet'],
 }); 

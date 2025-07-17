@@ -51,15 +51,27 @@ export default function DashboardPage() {
         const authData = await authRes.json();
         setUserEmail(authData.email);
 
-        // Get wallet address
-        const walletRes = await fetch("/api/profile/wallet", { credentials: "include" });
-        if (walletRes.ok) {
-          const walletData = await walletRes.json();
-          setDapperWallet(walletData.dapperWallet || "");
-          
-          // If wallet is connected, fetch real data
-          if (walletData.dapperWallet) {
-            await fetchDapperData(walletData.dapperWallet);
+        // Check for OAuth callback
+        const urlParams = new URLSearchParams(window.location.search);
+        const oauthStatus = urlParams.get('oauth');
+        const oauthWallet = urlParams.get('wallet');
+        
+        if (oauthStatus === 'success' && oauthWallet) {
+          setDapperWallet(oauthWallet);
+          await fetchDapperData(oauthWallet);
+          // Clear URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          // Get wallet address from profile
+          const walletRes = await fetch("/api/profile/wallet", { credentials: "include" });
+          if (walletRes.ok) {
+            const walletData = await walletRes.json();
+            setDapperWallet(walletData.dapperWallet || "");
+            
+            // If wallet is connected, fetch real data
+            if (walletData.dapperWallet) {
+              await fetchDapperData(walletData.dapperWallet);
+            }
           }
         }
 
