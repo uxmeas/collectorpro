@@ -1,11 +1,13 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-generator client [object Object]provider =prisma-client-js
+generator client {
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = postgresql  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -54,7 +56,8 @@ model RefreshToken {
   ipAddress   String?
   userAgent   String?
   
-  @@map(refresh_tokens)}
+  @@map("refresh_tokens")
+}
 
 model Moment {
   id                String   @id @default(cuid())
@@ -101,7 +104,7 @@ model RateLimit {
   windowStart DateTime @default(now())
   
   @@unique([identifier, endpoint, windowStart])
-  @@map(rate_limits")
+  @@map("rate_limits")
 }
 
 model SecurityLog {
