@@ -1,356 +1,300 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-const TEAM_LOGOS: { [key: string]: string } = {
-  Lakers: '/nba/lakers.svg',
-  Warriors: '/nba/warriors.svg',
-  Bucks: '/nba/bucks.svg',
-  Grizzlies: '/nba/grizzlies.svg',
-  Mavericks: '/nba/mavericks.svg',
-  Nets: '/nba/nets.svg',
-  Celtics: '/nba/celtics.svg',
-  Thunder: '/nba/thunder.svg',
-  Suns: '/nba/suns.svg',
-  Heat: '/nba/heat.svg',
-  // Add more as needed
+interface DapperMoment {
+  id: string;
+  playId: string;
+  playerName: string;
+  teamName: string;
+  playCategory: string;
+  playType: string;
+  rarity: string;
+  serialNumber: number;
+  totalCirculation: number;
+  acquisitionPrice?: number;
+  currentValue?: number;
+  acquisitionDate?: string;
+  momentURL: string;
+  imageURL: string;
 }
 
-const PLAYER_PHOTOS: { [key: string]: string } = {
-  'LeBron James': '/nba/players/lebron.png',
-  'Stephen Curry': '/nba/players/curry.png',
-  'Giannis Antetokounmpo': '/nba/players/giannis.png',
-  'Ja Morant': '/nba/players/jamorant.png',
-  'Luka Dončić': '/nba/players/luka.png',
-  'Kevin Durant': '/nba/players/durant.png',
-  'Russell Westbrook': '/nba/players/westbrook.png',
-  // Add more as needed
+interface Portfolio {
+  totalValue: number;
+  totalMoments: number;
+  totalAcquisitionCost: number;
+  totalProfit: number;
+  profitPercentage: number;
 }
 
-const MOMENTS = [
-  {
-    id: '1',
-    player: 'LeBron James',
-    team: 'Lakers',
-    name: 'Dunk vs Celtics',
-    serial: 2341,
-    price: 234,
-    rarity: 'Rare',
-  },
-  {
-    id: '2',
-    player: 'Stephen Curry',
-    team: 'Warriors',
-    name: '3PT vs Nets',
-    serial: 1567,
-    price: 189,
-    rarity: 'Legendary',
-  },
-  {
-    id: '3',
-    player: 'Giannis Antetokounmpo',
-    team: 'Bucks',
-    name: 'Block',
-    serial: 3421,
-    price: 156,
-    rarity: 'Rare',
-  },
-  {
-    id: '4',
-    player: 'Ja Morant',
-    team: 'Grizzlies',
-    name: 'Alley-Oop',
-    serial: 4532,
-    price: 134,
-    rarity: 'Common',
-  },
-  {
-    id: '5',
-    player: 'Luka Dončić',
-    team: 'Mavericks',
-    name: 'Fadeaway',
-    serial: 2789,
-    price: 198,
-    rarity: 'Rare',
-  },
-]
-
-const TRANSACTIONS = [
-  {
-    id: 't1',
-    type: 'Purchase',
-    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-    amount: 89,
-    moment: 'Kevin Durant 3-Pointer',
-    player: 'Kevin Durant',
-    team: 'Nets',
-    photo: '/nba/players/durant.png',
-  },
-  {
-    id: 't2',
-    type: 'Sale',
-    date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-    amount: 156,
-    moment: 'Russell Westbrook Dunk',
-    player: 'Russell Westbrook',
-    team: 'Lakers',
-    photo: '/nba/players/westbrook.png',
-  },
-  {
-    id: 't3',
-    type: 'Pack Opened',
-    date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-    amount: 0,
-    moment: 'Series 4 Base Pack',
-    player: '',
-    team: '',
-    photo: '',
-  },
-]
-
-const PORTFOLIO_HISTORY = [
-  { date: '2024-05-01', value: 1800 },
-  { date: '2024-05-08', value: 2100 },
-  { date: '2024-05-15', value: 2300 },
-  { date: '2024-05-22', value: 2450 },
-  { date: '2024-05-29', value: 2847 },
-]
-
-export default function Dashboard() {
-  const router = useRouter()
-  const [userEmail, setUserEmail] = useState<string>('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Portfolio stats
-  const totalMoments = 47
-  const portfolioValue = 2847
-  const totalSpent = 1920
-  const roi = '+48.3%'
+export default function DashboardPage() {
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState("");
+  const [dapperWallet, setDapperWallet] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [moments, setMoments] = useState<DapperMoment[]>([]);
+  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState("");
 
   useEffect(() => {
-    async function checkAuth() {
-      setLoading(true);
-      setError(null);
+    async function loadDashboard() {
       try {
-        const res = await fetch("/api/auth/me", { credentials: "include" });
-        if (!res.ok) {
+        // Check authentication
+        const authRes = await fetch("/api/auth/me", { credentials: "include" });
+        if (!authRes.ok) {
           router.push("/login");
           return;
         }
-        const data = await res.json();
-        setUserEmail(data.email);
+        const authData = await authRes.json();
+        setUserEmail(authData.email);
+
+        // Get wallet address
+        const walletRes = await fetch("/api/profile/wallet", { credentials: "include" });
+        if (walletRes.ok) {
+          const walletData = await walletRes.json();
+          setDapperWallet(walletData.dapperWallet || "");
+          
+          // If wallet is connected, fetch real data
+          if (walletData.dapperWallet) {
+            await fetchDapperData(walletData.dapperWallet);
+          }
+        }
+
         setLoading(false);
       } catch (err) {
-        setError("Session expired. Please log in again.");
+        setError("Failed to load dashboard");
         setLoading(false);
-        setTimeout(() => router.push("/login"), 1500);
       }
     }
-    checkAuth();
-    // eslint-disable-next-line
-  }, []);
+    loadDashboard();
+  }, [router]);
 
-  const signOut = async () => {
+  const fetchDapperData = async (walletAddress: string) => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.error('Logout error:', error);
+      setConnecting(true);
+      setError("");
+
+      const response = await fetch(`/api/dapper/connect?address=${walletAddress}`, {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to connect to Dapper wallet");
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setMoments(data.data.moments);
+        setPortfolio(data.data.portfolio);
+        setLastUpdated(data.data.lastUpdated);
+      } else {
+        throw new Error(data.error || "Failed to fetch Dapper data");
+      }
+    } catch (err) {
+      setError("Failed to connect to Dapper wallet. Please check your wallet address.");
+      console.error("Dapper connection error:", err);
+    } finally {
+      setConnecting(false);
     }
-    router.push('/');
   };
+
+  const handleConnectWallet = async () => {
+    if (!dapperWallet) {
+      setError("Please enter your Dapper wallet address");
+      return;
+    }
+
+    // Save wallet address first
+    try {
+      const saveRes = await fetch("/api/profile/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ dapperWallet }),
+      });
+
+      if (!saveRes.ok) {
+        throw new Error("Failed to save wallet address");
+      }
+
+      // Then fetch Dapper data
+      await fetchDapperData(dapperWallet);
+    } catch (err) {
+      setError("Failed to connect wallet");
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  const formatPercentage = (percentage: number) => {
+    return `${percentage >= 0 ? '+' : ''}${percentage.toFixed(2)}%`;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#181A1B] to-[#1D428A] flex items-center justify-center">
+        <span className="inline-block h-12 w-12 border-4 border-[#FDB927] border-t-transparent rounded-full animate-spin"></span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#181A1B] to-[#1D428A] font-[Inter,sans-serif] text-white relative overflow-x-hidden">
-      {/* Basketball court pattern background */}
-      <div className="absolute inset-0 z-0 pointer-events-none" style={{background: 'url("/court-pattern.svg") repeat', opacity: 0.13}} />
+      {/* Subtle court background */}
+      <div className="absolute inset-0 z-0 pointer-events-none" style={{ background: 'url("/court-pattern.svg") repeat', opacity: 0.08 }} />
+      
       {/* Header */}
       <header className="relative z-10 bg-black/70 backdrop-blur-md border-b border-[#222]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-6">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-[#C8102E] to-[#1D428A] mr-2">
-              <span className="text-2xl">🏆</span>
+              <span className="text-2xl">🏀</span>
               <span className="text-xl -ml-2">📊</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">CollectorPRO</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2-2ounded-full bg-red-500"></div>
-              <span className="text-red-400 text-sm font-semibold">Demo Mode</span>
-            </div>
             <span className="text-gray-300 text-sm">{userEmail}</span>
             <button
-              onClick={signOut}
+              onClick={() => router.push("/profile")}
               className="bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-4 py-2 rounded-full font-bold transition-all duration-200 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
             >
-              Sign Out
+              Profile
             </button>
           </div>
         </div>
       </header>
-      {/* Tagline & Disclaimer */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 flex flex-col sm:flex-row sm:justify-between items-center text-xs text-gray-400">
-        <span className="font-semibold">Unofficial portfolio analytics for NBA Top Shot collectors</span>
-        <span className="mt-2 sm:mt-0">Not affiliated with NBA Top Shot or Dapper Labs</span>
-      </div>
-      {/* Dashboard Content */}
+
+      {/* Main Content */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {loading ? (
-          <div className="flex items-center justify-center py-32">
-            <span className="inline-block h-12 w-12 border-4 border-[#FDB927] border-t-transparent rounded-full animate-spin"></span>
+        {/* Wallet Connection */}
+        {!dapperWallet && (
+          <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-[#23272A] mb-8">
+            <h2 className="text-2xl font-bold text-white mb-4">Connect Your Dapper Wallet</h2>
+            <p className="text-gray-300 mb-6">
+              Connect your Dapper wallet to view your real NBA Top Shot collection and portfolio analytics.
+            </p>
+            <div className="flex gap-4">
+              <input
+                type="text"
+                value={dapperWallet}
+                onChange={(e) => setDapperWallet(e.target.value)}
+                placeholder="Enter your Dapper wallet address (0x...)"
+                className="flex-1 px-4 py-3 rounded-lg bg-[#23272A] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
+              />
+              <button
+                onClick={handleConnectWallet}
+                disabled={connecting}
+                className="bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
+              >
+                {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
+                {connecting ? "Connecting..." : "Connect Wallet"}
+              </button>
+            </div>
           </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-32">
-            <div className="text-4xl mb-4">⚠️</div>
-            <div className="text-white text-lg font-semibold mb-2">{error}</div>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 bg-gradient-to-r from-[#C8102E] to-[#1D428A] text-white px-6 py-2 rounded-full font-bold transition-all duration-200 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* Portfolio Overview */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
-              <div className="bg-[#23272A]/80 rounded-xl p-6 border border-[#333] shadow-md flex flex-col items-center">
-                <span className="text-2xl mb-2">💎</span>
-                <div className="text-2xl font-bold text-white">{totalMoments}</div>
-                <div className="text-xs text-gray-400 mt-1">Total Moments</div>
-              </div>
-              <div className="bg-[#23272A]/80 rounded-xl p-6 border border-[#333] shadow-md flex flex-col items-center">
-                <span className="text-2xl mb-2">📈</span>
-                <div className="text-2xl font-bold text-[#FDB927]">${portfolioValue.toLocaleString()}</div>
-                <div className="text-xs text-gray-400 mt-1">Portfolio Value</div>
-              </div>
-              <div className="bg-[#23272A]/80 rounded-xl p-6 border border-[#333] shadow-md flex flex-col items-center">
-                <span className="text-2xl mb-2">💰</span>
-                <div className="text-2xl font-bold text-[#FDB927]">${totalSpent.toLocaleString()}</div>
-                <div className="text-xs text-gray-400 mt-1">Total Spent</div>
-              </div>
-              <div className="bg-[#23272A]/80 rounded-xl p-6 border border-[#333] shadow-md flex flex-col items-center">
-                <span className="text-2xl mb-2">🏆</span>
-                <div className="text-2xl font-bold text-green-400">{roi}</div>
-                <div className="text-xs text-gray-400 mt-1">ROI</div>
-              </div>
-            </div>
-            {/* Portfolio Value Chart */}
-            <div className="bg-[#23272A]/80 rounded-xl p-6 border border-[#333] shadow-md mb-10">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><span>📊</span> Portfolio Value Over Time</h3>
-              {/* Simple SVG line chart for demo */}
-              <svg width="100%" height="80" viewBox="0 0 400 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <polyline
-                  fill="none"
-                  stroke="#FDB927"
-                  strokeWidth="4"
-                  strokeLinejoin="round"
-                  points="0,70 80,60 160,50 240,40 320,20 400,10"
-                />
-                <circle cx="0" cy="70" r="4" fill="#FDB927" />
-                <circle cx="80" cy="60" r="4" fill="#FDB927" />
-                <circle cx="160" cy="50" r="4" fill="#FDB927" />
-                <circle cx="240" cy="40" r="4" fill="#FDB927" />
-                <circle cx="320" cy="20" r="4" fill="#FDB927" />
-                <circle cx="400" cy="10" r="4" fill="#FDB927" />
-              </svg>
-              <div className="flex justify-between text-xs text-gray-400 mt-2">
-                {PORTFOLIO_HISTORY.map((pt) => (
-                  <span key={pt.date}>{pt.date.slice(5)}</span>
-                ))}
-              </div>
-            </div>
-            {/* Moments Collection */}
-            <div className="mb-10">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><span>🏀</span> My Moments</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                {MOMENTS.map((moment) => (
-                  <div key={moment.id} className="bg-[#181A1B]/90 rounded-xl p-4 border border-[#333] shadow-md flex flex-col items-center hover:scale-105 transition-transform duration-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <img src={TEAM_LOGOS[moment.team]} alt={moment.team} className="h-7 w-7 rounded-full border border-[#FDB927] bg-white" />
-                      <span className="text-sm font-bold" style={{color: teamColor(moment.team)}}>{moment.team}</span>
-                    </div>
-                    <img src={PLAYER_PHOTOS[moment.player]} alt={moment.player} className="h-16 w-16 rounded-lg object-cover border-2 border-[#23272A] mb-2" />
-                    <div className="text-base font-bold text-white mb-1 text-center">{moment.player}</div>
-                    <div className="text-xs text-gray-400 mb-1 text-center">{moment.name}</div>
-                    <div className="text-xs text-gray-500 mb-1">Serial #{moment.serial}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-lg font-bold text-[#FDB927]">${moment.price}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full font-bold ${rarityColor(moment.rarity)}`}>{moment.rarity}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Recent Transactions */}
-            <div className="mb-10">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><span>💸</span> Recent Transactions</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead>
-                    <tr className="text-gray-400">
-                      <th className="py-2 px-2">Type</th>
-                      <th className="py-2 px-2">Moment</th>
-                      <th className="py-2 px-2">Player</th>
-                      <th className="py-2 px-2">Team</th>
-                      <th className="py-2 px-2">Date</th>
-                      <th className="py-2 px-2">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {TRANSACTIONS.map((tx) => (
-                      <tr key={tx.id} className="border-t border-[#23272A] hover:bg-[#23272A]/60 transition-colors">
-                        <td className="py-2 px-2 font-bold">
-                          <span className={tx.type === 'Purchase' ? 'text-green-400' : tx.type === 'Sale' ? 'text-red-400' : 'text-[#FDB927]'}>{tx.type}</span>
-                        </td>
-                        <td className="py-2 px-2">{tx.moment}</td>
-                        <td className="py-2 px-2">
-                          {tx.photo && <img src={tx.photo} alt={tx.player} className="inline h-6 w-6 rounded-full mr-2 align-middle border border-[#FDB927] bg-white" />}
-                          {tx.player}
-                        </td>
-                        <td className="py-2 px-2">
-                          {tx.team && <img src={TEAM_LOGOS[tx.team]} alt={tx.team} className="inline h-6 w-6 rounded-full mr-2 align-middle border border-[#FDB927] bg-white" />}
-                          {tx.team}
-                        </td>
-                        <td className="py-2 px-2">{tx.date}</td>
-                        <td className="py-2 px-2 font-bold">{tx.amount > 0 ? `$${tx.amount}` : '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
         )}
+
+        {/* Portfolio Overview */}
+        {portfolio && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-[#23272A]">
+              <h3 className="text-gray-400 text-sm font-medium mb-2">Portfolio Value</h3>
+              <p className="text-2xl font-bold text-white">{formatCurrency(portfolio.totalValue)}</p>
+            </div>
+            <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-[#23272A]">
+              <h3 className="text-gray-400 text-sm font-medium mb-2">Total Moments</h3>
+              <p className="text-2xl font-bold text-white">{portfolio.totalMoments}</p>
+            </div>
+            <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-[#23272A]">
+              <h3 className="text-gray-400 text-sm font-medium mb-2">Total Profit/Loss</h3>
+              <p className={`text-2xl font-bold ${portfolio.totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {formatCurrency(portfolio.totalProfit)}
+              </p>
+            </div>
+            <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-[#23272A]">
+              <h3 className="text-gray-400 text-sm font-medium mb-2">ROI</h3>
+              <p className={`text-2xl font-bold ${portfolio.profitPercentage >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {formatPercentage(portfolio.profitPercentage)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-8">
+            <p className="text-red-400">{error}</p>
+          </div>
+        )}
+
+        {/* Last Updated */}
+        {lastUpdated && (
+          <div className="text-gray-400 text-sm mb-6">
+            Last updated: {new Date(lastUpdated).toLocaleString()}
+          </div>
+        )}
+
+        {/* Moments Grid */}
+        {moments.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {moments.map((moment) => (
+              <div key={moment.id} className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-[#23272A] overflow-hidden">
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">{moment.playerName}</h3>
+                      <p className="text-gray-400 text-sm">{moment.teamName}</p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                      moment.rarity === 'LEGENDARY' ? 'bg-yellow-500/20 text-yellow-400' :
+                      moment.rarity === 'RARE' ? 'bg-blue-500/20 text-blue-400' :
+                      'bg-gray-500/20 text-gray-400'
+                    }`}>
+                      {moment.rarity}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2 mb-4">
+                    <p className="text-sm text-gray-300">
+                      <span className="font-medium">Play:</span> {moment.playCategory} - {moment.playType}
+                    </p>
+                    <p className="text-sm text-gray-300">
+                      <span className="font-medium">Serial:</span> #{moment.serialNumber} / {moment.totalCirculation}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-gray-400">Current Value</p>
+                      <p className="text-lg font-bold text-white">{formatCurrency(moment.currentValue || 0)}</p>
+                    </div>
+                    {moment.acquisitionPrice && (
+                      <div className="text-right">
+                        <p className="text-sm text-gray-400">Acquired</p>
+                        <p className="text-sm text-white">{formatCurrency(moment.acquisitionPrice)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : dapperWallet ? (
+          <div className="text-center py-12">
+            <p className="text-gray-400 text-lg">No moments found in your collection.</p>
+            <p className="text-gray-500 text-sm mt-2">Make sure your wallet address is correct and contains NBA Top Shot moments.</p>
+          </div>
+        ) : null}
       </main>
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap');
-        html { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-      `}</style>
     </div>
-  )
-}
-
-function rarityColor(rarity: string) {
-  if (rarity === 'Legendary') return 'bg-gradient-to-r from-[#FDB927] to-[#C8102E] text-black';
-  if (rarity === 'Rare') return 'bg-gradient-to-r from-[#1D428A] to-[#FDB927] text-white';
-  return 'bg-[#23272A] text-gray-200';
-}
-
-function teamColor(team: string) {
-  const colors: Record<string, string> = {
-    Lakers: '#FDB927',
-    Warriors: '#1D428A',
-    Bucks: '#00471B',
-    Grizzlies: '#5D76A9',
-    Mavericks: '#00538C',
-    Nets: '#000000',
-    Celtics: '#007A33',
-    Thunder: '#007AC1',
-    Suns: '#1D1160',
-    Heat: '#98002E',
-  }
-  return colors[team] || '#FDB927';
+  );
 } 
