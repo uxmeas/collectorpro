@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-// In-memory only: import stores from register route
-import { users, verificationTokens } from '../register/route';
+// In-memory only: import stores from data file
+import { users, verificationTokens } from '../../../../lib/data';
 
 export async function GET(req: NextRequest) {
   console.log('🔍 Verification API called');

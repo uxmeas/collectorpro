@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { users, verificationTokens } from '../../../../lib/data';
 
 // In-memory user store (replace with DB later)
 interface User {
@@ -11,10 +12,6 @@ interface User {
   verificationToken?: string;
   verificationTokenExpires?: string;
 }
-const users: User[] = [];
-
-// In-memory verification tokens store
-const verificationTokens: Record<string, { email: string; expires: number }> = {};
 
 // Email regex for basic validation
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,8 +28,6 @@ function sendVerificationEmail(email: string, token: string): void {
   console.log(`🔗 Verification URL: ${verificationUrl}`);
   // TODO: Integrate with real email service (SendGrid, AWS SES, etc.)
 }
-
-export { users, verificationTokens };
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,7 +47,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Passwords do not match.' }, { status: 400 });
     }
     // Check if user already exists
-    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+    if (users.some((u: User) => u.email.toLowerCase() === email.toLowerCase())) {
       return NextResponse.json({ error: 'Email already registered.' }, { status: 409 });
     }
     // Hash password

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { users } from '../register/route';
+import { users } from '../../../../lib/data';
 
 interface User {
   email: string;
