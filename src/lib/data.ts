@@ -11,4 +11,7 @@ interface User {
 export const users: User[] = [];
 
 // In-memory verification tokens store
-export const verificationTokens: Record<string, { email: string; expires: number }> = {}; 
+export const verificationTokens: Record<string, { email: string; expires: number }> = {};
+
+// In-memory password reset tokens store
+export const passwordResetTokens: Record<string, { email: string; expires: number }> = {}; 

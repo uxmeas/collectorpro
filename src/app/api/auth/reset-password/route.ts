@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { users } from '../../../../lib/data';
-import { passwordResetTokens } from '../forgot-password/route';
+import { users, passwordResetTokens } from '../../../../lib/data';
 
 export async function POST(req: NextRequest) {
   try {

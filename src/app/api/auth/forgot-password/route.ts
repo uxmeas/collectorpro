@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { users } from '../../../../lib/data';
+import { users, passwordResetTokens } from '../../../../lib/data';
 import { sendPasswordResetEmail } from '../../../../lib/email';
-
-// In-memory store for password reset tokens
-export const passwordResetTokens: Record<string, { email: string; expires: number }> = {};
 
 // Generate secure reset token
 function generateResetToken(): string {
