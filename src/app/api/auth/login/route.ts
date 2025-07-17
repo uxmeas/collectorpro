@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { users, verificationTokens } from '../register/route';
+import { users } from '../register/route';
+
+interface User {
+  email: string;
+  passwordHash: string;
+  emailVerified?: boolean;
+  verificationToken?: string;
+  createdAt: string;
+}
 
 // In-memory rate limit store (by IP)
 const failedAttempts: Record<string, { count: number; lastAttempt: number; lockedUntil?: number }> = {};
@@ -11,7 +19,7 @@ const LOCKOUT_MINUTES = 15;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 const JWT_EXPIRES_IN = '24h';
 
-function resendVerificationEmail(user: any) {
+function resendVerificationEmail(user: User) {
   if (!user.verificationToken) return;
   const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-email/${user.verificationToken}`;
   console.log(`📧 Resending verification email to ${user.email}`);
@@ -32,7 +40,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
     }
     // Find user
-    const user = users.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
+    const user = users.find((u: User) => u.email.toLowerCase() === email.toLowerCase());
     if (!user) {
       failedAttempts[ip] = { count: rate.count + 1, lastAttempt: now };
       if (failedAttempts[ip].count >= MAX_ATTEMPTS) {
@@ -78,7 +86,8 @@ export async function POST(req: NextRequest) {
       path: '/',
     });
     return response;
-  } catch (err: any) {
+  } catch (error: unknown) {
+    console.error('Login error:', error);
     return NextResponse.json({ error: 'Login failed.' }, { status: 500 });
   }
 } 

@@ -157,7 +157,7 @@ export default function LoginPage() {
           </button>
         </form>
         <div className="mt-8 flex flex-col items-center space-y-2">
-          <span className="text-xs text-gray-400">Don't have an account? <a href="/register" className="text-[#FDB927] hover:underline">Sign up</a></span>
+          <span className="text-xs text-gray-400">Don&apos;t have an account? <a href="/register" className="text-[#FDB927] hover:underline">Sign up</a></span>
           <a href="/terms" className="text-[#FDB927] hover:underline text-xs font-medium transition-colors">Terms of Service</a>
           <a href="/privacy" className="text-[#FDB927] hover:underline text-xs font-medium transition-colors">Privacy Policy</a>
         </div>
