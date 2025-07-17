@@ -25,12 +25,7 @@ export interface DapperUser {
   totalMoments: number;
 }
 
-// Flow blockchain configuration
-const FLOW_NETWORK = process.env.NODE_ENV === 'production' ? 'mainnet' : 'testnet';
-const TOP_SHOT_CONTRACT = '0x0ea0b81b1b1850c2aa1eb0f5596e656422d7c660dfbf0fea2a87c31c3cdf5808';
-
 // Dapper API endpoints
-const DAPPER_API_BASE = 'https://api.dapperlabs.com/v1';
 const TOP_SHOT_API_BASE = 'https://api.nbatopshot.com';
 
 export class DapperService {
@@ -113,7 +108,7 @@ export class DapperService {
   }
 
   // Get user's transaction history
-  async getTransactionHistory(): Promise<any[]> {
+  async getTransactionHistory(): Promise<Record<string, unknown>[]> {
     try {
       const response = await fetch(`${TOP_SHOT_API_BASE}/users/${this.userAddress}/transactions`, {
         headers: {
@@ -134,26 +129,26 @@ export class DapperService {
   }
 
   // Transform API data to our format
-  private transformMoments(moments: any[]): DapperMoment[] {
+  private transformMoments(moments: Record<string, unknown>[]): DapperMoment[] {
     return moments.map(moment => this.transformMoment(moment));
   }
 
-  private transformMoment(moment: any): DapperMoment {
+  private transformMoment(moment: Record<string, unknown>): DapperMoment {
     return {
-      id: moment.id,
-      playId: moment.playId,
-      playerName: moment.playerName,
-      teamName: moment.teamName,
-      playCategory: moment.playCategory,
-      playType: moment.playType,
-      rarity: moment.rarity,
-      serialNumber: moment.serialNumber,
-      totalCirculation: moment.totalCirculation,
-      acquisitionPrice: moment.acquisitionPrice,
-      currentValue: moment.currentValue,
-      acquisitionDate: moment.acquisitionDate,
-      momentURL: moment.momentURL,
-      imageURL: moment.imageURL,
+      id: String(moment.id || ''),
+      playId: String(moment.playId || ''),
+      playerName: String(moment.playerName || ''),
+      teamName: String(moment.teamName || ''),
+      playCategory: String(moment.playCategory || ''),
+      playType: String(moment.playType || ''),
+      rarity: String(moment.rarity || ''),
+      serialNumber: Number(moment.serialNumber) || 0,
+      totalCirculation: Number(moment.totalCirculation) || 0,
+      acquisitionPrice: moment.acquisitionPrice ? Number(moment.acquisitionPrice) : undefined,
+      currentValue: moment.currentValue ? Number(moment.currentValue) : undefined,
+      acquisitionDate: moment.acquisitionDate ? String(moment.acquisitionDate) : undefined,
+      momentURL: String(moment.momentURL || ''),
+      imageURL: String(moment.imageURL || ''),
     };
   }
 
@@ -211,7 +206,7 @@ export class FlowService {
   }
 
   // Get user's Flow account info
-  async getAccountInfo(address: string): Promise<any> {
+  async getAccountInfo(address: string): Promise<Record<string, unknown> | null> {
     try {
       // This would query the Flow blockchain
       return {

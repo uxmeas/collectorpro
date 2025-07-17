@@ -64,7 +64,7 @@ export default function DashboardPage() {
         }
 
         setLoading(false);
-      } catch (err) {
+      } catch {
         setError("Failed to load dashboard");
         setLoading(false);
       }
@@ -102,6 +102,42 @@ export default function DashboardPage() {
     }
   };
 
+  const handleOAuthConnect = async () => {
+    try {
+      setConnecting(true);
+      setError("");
+
+      const response = await fetch("/api/dapper/oauth/connect", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to initiate OAuth connection");
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        if (data.authUrl) {
+          // Redirect to Dapper OAuth
+          window.location.href = data.authUrl;
+        } else if (data.walletAddress) {
+          // Already connected
+          setDapperWallet(data.walletAddress);
+          await fetchDapperData(data.walletAddress);
+        }
+      } else {
+        throw new Error(data.error || "OAuth connection failed");
+      }
+    } catch (err) {
+      setError("Failed to connect with Dapper OAuth");
+      console.error("OAuth connection error:", err);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
   const handleConnectWallet = async () => {
     if (!dapperWallet) {
       setError("Please enter your Dapper wallet address");
@@ -123,7 +159,7 @@ export default function DashboardPage() {
 
       // Then fetch Dapper data
       await fetchDapperData(dapperWallet);
-    } catch (err) {
+    } catch {
       setError("Failed to connect wallet");
     }
   };
@@ -183,22 +219,46 @@ export default function DashboardPage() {
             <p className="text-gray-300 mb-6">
               Connect your Dapper wallet to view your real NBA Top Shot collection and portfolio analytics.
             </p>
-            <div className="flex gap-4">
-              <input
-                type="text"
-                value={dapperWallet}
-                onChange={(e) => setDapperWallet(e.target.value)}
-                placeholder="Enter your Dapper wallet address (0x...)"
-                className="flex-1 px-4 py-3 rounded-lg bg-[#23272A] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
-              />
+            
+            {/* OAuth Connection Option */}
+            <div className="mb-6 p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
+              <h3 className="text-lg font-semibold text-white mb-2">🔐 Quick Connect (Recommended)</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Connect securely with your Dapper account using OAuth. No need to manually enter wallet addresses.
+              </p>
               <button
-                onClick={handleConnectWallet}
+                onClick={handleOAuthConnect}
                 disabled={connecting}
-                className="bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
+                className="bg-gradient-to-r from-[#FDB927] to-[#C8102E] hover:from-[#1D428A] hover:to-[#FDB927] text-black px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
               >
-                {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
-                {connecting ? "Connecting..." : "Connect Wallet"}
+                {connecting && <span className="inline-block h-5 w-5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>}
+                {connecting ? "Connecting..." : "🔗 Connect with Dapper"}
               </button>
+            </div>
+
+            {/* Manual Connection Option */}
+            <div className="p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
+              <h3 className="text-lg font-semibold text-white mb-2">📝 Manual Connection</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Enter your Flow wallet address manually if you prefer.
+              </p>
+              <div className="flex gap-4">
+                <input
+                  type="text"
+                  value={dapperWallet}
+                  onChange={(e) => setDapperWallet(e.target.value)}
+                  placeholder="Enter your Dapper wallet address (0x...)"
+                  className="flex-1 px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
+                />
+                <button
+                  onClick={handleConnectWallet}
+                  disabled={connecting}
+                  className="bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
+                >
+                  {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
+                  {connecting ? "Connecting..." : "Connect Wallet"}
+                </button>
+              </div>
             </div>
           </div>
         )}

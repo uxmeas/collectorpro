@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
     const decoded = jwt.verify(token, JWT_SECRET) as { email: string; createdAt: string };
     return NextResponse.json({ email: decoded.email });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'Session expired' }, { status: 401 });
   }
 } 

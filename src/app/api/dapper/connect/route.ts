@@ -11,7 +11,6 @@ export async function POST(req: NextRequest) {
 
     // Initialize Dapper service
     const dapperService = new DapperService(walletAddress);
-    const flowService = new FlowService();
 
     // Get user's moments
     const moments = await dapperService.getUserMoments();

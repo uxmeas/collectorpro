@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const dapperWallet = userWallets[decoded.email] || '';
 
     return NextResponse.json({ dapperWallet });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'Failed to get wallet' }, { status: 500 });
   }
 }
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     userWallets[decoded.email] = dapperWallet;
     
     return NextResponse.json({ success: true, dapperWallet });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'Failed to save wallet' }, { status: 500 });
   }
 } 
