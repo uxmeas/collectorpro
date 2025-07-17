@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { users, verificationTokens } from '../../../../lib/data';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     return NextResponse.json({
       success: true,
       data: {
         totalUsers: users.length,
         totalTokens: Object.keys(verificationTokens).length,
-        users: users.map((u: any) => ({
+        users: users.map((u: { email: string; emailVerified: boolean; verificationToken?: string; verificationTokenExpires?: string }) => ({
           email: u.email,
           verified: u.emailVerified,
           hasToken: !!u.verificationToken,
@@ -16,9 +16,9 @@ export async function GET(req: NextRequest) {
         })),
         tokens: Object.entries(verificationTokens).map(([token, data]) => ({
           tokenPreview: token.substring(0, 10) + '...',
-          email: (data as any).email,
-          expires: new Date((data as any).expires).toISOString(),
-          isExpired: Date.now() > (data as any).expires
+          email: (data as { email: string; expires: number }).email,
+          expires: new Date((data as { email: string; expires: number }).expires).toISOString(),
+          isExpired: Date.now() > (data as { email: string; expires: number }).expires
         }))
       }
     });
