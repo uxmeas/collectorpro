@@ -337,7 +337,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <p className="text-gray-300 text-sm">
-              Your wallet is connected. Click "Load Moments" to view your collection.
+              Your wallet is connected. Click &ldquo;Load Moments&rdquo; to view your collection.
             </p>
             
             {/* Load Moments Button */}
