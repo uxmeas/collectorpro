@@ -24,8 +24,11 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ token: s
     
     async function verify() {
       try {
-        const res = await fetch(`/api/auth/verify-email?token=${token}`);
+        console.log('🔍 Verifying token:', token);
+        const res = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`);
         const data = await res.json();
+        
+        console.log('📄 Verification response:', data);
         
         if (res.ok) {
           setStatus('success');
@@ -37,15 +40,16 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ token: s
             setMessage('Verification link expired. You can request a new one below.');
           } else if (data.error === 'invalid') {
             setStatus('invalid');
-            setMessage('Invalid verification link.');
+            setMessage('Invalid verification link. Please check your email for the correct link.');
           } else {
             setStatus('error');
-            setMessage('Verification failed.');
+            setMessage('Verification failed. Please try again.');
           }
         }
-      } catch {
+      } catch (error) {
+        console.error('Verification error:', error);
         setStatus('error');
-        setMessage('Verification failed.');
+        setMessage('Verification failed. Please try again.');
       }
     }
     verify();

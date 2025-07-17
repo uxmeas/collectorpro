@@ -4,15 +4,17 @@ import { users, verificationTokens } from '../../../../lib/data';
 
 export async function GET(req: NextRequest) {
   console.log('🔍 Verification API called');
-  console.log('📄Request URL:', req.url);
+  console.log('📄 Request URL:', req.url);
   
   const { searchParams } = new URL(req.url);
   const token = searchParams.get('token');
   const origin = req.nextUrl.origin;
   
   console.log('🔑 Token from query params:', token);
+  console.log('🔑 Token length:', token?.length);
   console.log('🏠 Origin:', origin);
   console.log('📊 Available tokens:', Object.keys(verificationTokens));
+  console.log('📊 Token keys (first 10 chars):', Object.keys(verificationTokens).map(t => t.substring(0, 10)));
   console.log('👥 Available users:', users.map(u => ({ email: u.email, verified: u.emailVerified })));
   
   if (!token) {
