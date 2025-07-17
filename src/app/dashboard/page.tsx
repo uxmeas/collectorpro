@@ -135,6 +135,52 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchFlowData = async (walletAddress: string) => {
+    try {
+      setConnecting(true);
+      setError("");
+
+      const response = await fetch(`/api/flow/connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          walletAddress
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch Flow blockchain data");
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setMoments(data.data.moments);
+        setPortfolio(data.data.portfolio);
+        setLastUpdated(data.data.lastUpdated);
+        
+        // Save wallet address to profile
+        await fetch("/api/profile/wallet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            dapperWallet: walletAddress
+          }),
+        });
+      } else {
+        throw new Error(data.error || "Failed to fetch Flow blockchain data");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to connect to Flow blockchain. Please check your wallet address.");
+      console.error("Flow blockchain connection error:", err);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
   const handleOAuthConnect = async () => {
     try {
       setConnecting(true);
@@ -252,14 +298,46 @@ export default function DashboardPage() {
         {/* Wallet Connection */}
         {!dapperWallet ? (
           <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-[#23272A] mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">Connect Your Dapper Wallet</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Connect Your NBA Top Shot Collection</h2>
             <p className="text-gray-300 mb-6">
-              Connect your Dapper wallet to view your real NBA Top Shot collection and portfolio analytics.
+              Choose your preferred method to connect and view your real NBA Top Shot collection and portfolio analytics.
             </p>
             
+            {/* Flow Blockchain Connection (Livetoken.co approach) */}
+            <div className="mb-6 p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
+              <h3 className="text-lg font-semibold text-white mb-2">🔗 Flow Blockchain (Recommended)</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Connect directly to the Flow blockchain like Livetoken.co. Enter your Flow wallet address to view your NBA Top Shot collection.
+              </p>
+              
+              <div className="space-y-4 mb-4">
+                <div>
+                  <input
+                    type="text"
+                    value={dapperWallet}
+                    onChange={(e) => setDapperWallet(e.target.value)}
+                    placeholder="Enter your Flow wallet address (0x...)"
+                    className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
+                  />
+                </div>
+                <p className="text-green-400 text-sm">
+                  ✅ Direct blockchain connection - no credentials needed. Works like Livetoken.co.
+                </p>
+              </div>
+
+              <button
+                onClick={() => fetchFlowData(dapperWallet)}
+                disabled={connecting || !dapperWallet}
+                className="w-full bg-gradient-to-r from-[#00D4AA] to-[#0099CC] hover:from-[#0099CC] hover:to-[#00D4AA] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#00D4AA]"
+              >
+                {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
+                {connecting ? "Connecting..." : "🔗 Connect to Flow Blockchain"}
+              </button>
+            </div>
+
             {/* OAuth Connection Option */}
             <div className="mb-6 p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
-              <h3 className="text-lg font-semibold text-white mb-2">🔐 Quick Connect (Recommended)</h3>
+              <h3 className="text-lg font-semibold text-white mb-2">🔐 Dapper OAuth Connect</h3>
               <p className="text-gray-400 text-sm mb-4">
                 Connect securely with your Dapper account using OAuth. Your Dapper account email can be different from your CollectorPRO login email.
               </p>
@@ -269,18 +347,18 @@ export default function DashboardPage() {
                 className="bg-gradient-to-r from-[#FDB927] to-[#C8102E] hover:from-[#1D428A] hover:to-[#FDB927] text-black px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
               >
                 {connecting && <span className="inline-block h-5 w-5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>}
-                {connecting ? "Connecting..." : "🔗 Connect with Dapper"}
+                {connecting ? "Connecting..." : "🔗 Connect with Dapper OAuth"}
               </button>
             </div>
 
-            {/* Manual Connection Option */}
+            {/* Manual Dapper Connection Option */}
             <div className="p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
-              <h3 className="text-lg font-semibold text-white mb-2">📝 Manual Connection</h3>
+              <h3 className="text-lg font-semibold text-white mb-2">📝 Manual Dapper Connection</h3>
               <p className="text-gray-400 text-sm mb-4">
                 Enter your Dapper account credentials to connect your wallet. The system will automatically find and connect your NBA Top Shot wallet.
               </p>
               
-              {/* Dapper Credentials (always visible) */}
+              {/* Dapper Credentials */}
               <div className="space-y-4 mb-4">
                 <div>
                   <input
@@ -311,7 +389,7 @@ export default function DashboardPage() {
                 className="w-full bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
               >
                 {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
-                {connecting ? "Connecting..." : "Connect Wallet"}
+                {connecting ? "Connecting..." : "Connect Dapper Wallet"}
               </button>
             </div>
           </div>
