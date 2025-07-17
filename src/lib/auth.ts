@@ -19,7 +19,7 @@ export async function getCurrentUser(): Promise<User | null> {
     
     const decoded = jwt.verify(token, JWT_SECRET) as User;
     return decoded;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -33,7 +33,7 @@ export function verifyToken(token: string): User | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as User;
     return decoded;
-  } catch (error) {
+  } catch {
     return null;
   }
 } 

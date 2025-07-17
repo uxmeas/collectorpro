@@ -98,7 +98,7 @@ export class DapperOAuth {
   }
 
   // Get user's NBA Top Shot data
-  async getUserData(email: string): Promise<any> {
+  async getUserData(email: string): Promise<Record<string, unknown>> {
     const tokens = userTokens[email];
     if (!tokens) {
       throw new Error('No OAuth tokens found');

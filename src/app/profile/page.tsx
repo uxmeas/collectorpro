@@ -24,7 +24,7 @@ export default function ProfilePage() {
         setUserEmail(data.email);
         setDapperWallet(data.dapperWallet || "");
         setLoading(false);
-      } catch (err) {
+      } catch {
         setError("Failed to load profile");
         setLoading(false);
       }
@@ -51,7 +51,7 @@ export default function ProfilePage() {
       }
 
       setSuccess("Dapper wallet address saved successfully!");
-    } catch (err) {
+    } catch {
       setError("Failed to save wallet address");
     } finally {
       setSaving(false);

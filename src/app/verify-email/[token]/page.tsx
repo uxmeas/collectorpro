@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 export default function VerifyEmailPage({ params }: { params: Promise<{ token: string }> }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [status, setStatus] = useState<'pending'|'success'|'expired'|'invalid'|'error'>('pending');
   const [message, setMessage] = useState('Verifying your email...');
   const [resending, setResending] = useState(false);
