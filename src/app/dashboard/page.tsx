@@ -236,7 +236,7 @@ export default function DashboardPage() {
             <div className="mb-6 p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
               <h3 className="text-lg font-semibold text-white mb-2">🔐 Quick Connect (Recommended)</h3>
               <p className="text-gray-400 text-sm mb-4">
-                Connect securely with your Dapper account using OAuth. No need to manually enter wallet addresses.
+                Connect securely with your Dapper account using OAuth. Your Dapper account email can be different from your CollectorPRO login email.
               </p>
               <button
                 onClick={handleOAuthConnect}
@@ -252,7 +252,7 @@ export default function DashboardPage() {
             <div className="p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
               <h3 className="text-lg font-semibold text-white mb-2">📝 Manual Connection</h3>
               <p className="text-gray-400 text-sm mb-4">
-                Enter your Flow wallet address manually if you prefer.
+                Enter your Flow wallet address manually if you prefer. This wallet can be associated with any Dapper account, regardless of your CollectorPRO login email.
               </p>
               <div className="flex gap-4">
                 <input

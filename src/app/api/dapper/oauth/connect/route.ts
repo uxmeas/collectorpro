@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as { email: string };
-    const userEmail = decoded.email;
+    const userEmail = decoded.email; // This is the CollectorPRO login email
 
     // Check if user already has OAuth connection
     if (dapperOAuth.hasConnection(userEmail)) {
@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate OAuth authorization URL
+    // Note: The Dapper account email will be collected during OAuth flow and can be different from userEmail
     const authUrl = dapperOAuth.generateAuthUrl(userEmail);
 
     return NextResponse.json({

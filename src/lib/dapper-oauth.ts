@@ -32,6 +32,7 @@ export class DapperOAuth {
   }
 
   // Generate OAuth authorization URL
+  // Note: The email parameter here is the Dapper account email, which can be different from the CollectorPRO login email
   generateAuthUrl(email: string): string {
     const state = crypto.randomBytes(32).toString('hex');
     oauthStates[email] = state;
@@ -42,7 +43,7 @@ export class DapperOAuth {
       response_type: 'code',
       scope: this.config.scope.join(' '),
       state: state,
-      email: email, // Include email for demo OAuth
+      email: email, // This is the Dapper account email, independent of CollectorPRO login
     });
 
     // Note: Dapper Labs doesn't have a public OAuth service
