@@ -131,7 +131,7 @@ export default function LoginPage() {
               </button>
             </div>
             <div className="flex justify-end mt-1">
-              <a href="#" className="text-xs text-[#FDB927] hover:underline font-medium transition-colors">Forgot password?</a>
+              <a href="/forgot-password" className="text-xs text-[#FDB927] hover:underline font-medium transition-colors">Forgot password?</a>
             </div>
           </div>
           {error && <div className="text-red-400 text-sm text-center animate-shake mt-2">{error}</div>}

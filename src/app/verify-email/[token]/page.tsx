@@ -25,26 +25,23 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ token: s
     async function verify() {
       try {
         const res = await fetch(`/api/auth/verify-email?token=${token}`);
-        if (res.redirected) {
-          const url = new URL(res.url);
-          const result = url.searchParams.get('verify');
-          if (result === 'success') {
-            setStatus('success');
-            setMessage('Your email has been verified! You can now log in.');
-            setTimeout(() => router.push('/login?verify=success'), 2000);
-          } else if (result === 'expired') {
+        const data = await res.json();
+        
+        if (res.ok) {
+          setStatus('success');
+          setMessage('Your email has been verified! You can now log in.');
+          setTimeout(() => router.push('/login?verify=success'), 2000);
+        } else {
+          if (data.error === 'expired') {
             setStatus('expired');
             setMessage('Verification link expired. You can request a new one below.');
-          } else if (result === 'invalid') {
+          } else if (data.error === 'invalid') {
             setStatus('invalid');
             setMessage('Invalid verification link.');
           } else {
             setStatus('error');
             setMessage('Verification failed.');
           }
-        } else {
-          setStatus('error');
-          setMessage('Verification failed.');
         }
       } catch {
         setStatus('error');

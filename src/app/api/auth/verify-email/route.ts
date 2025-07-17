@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   
   if (!token) {
     console.log('❌ No token provided');
-    return NextResponse.redirect(`${origin}/login?verify=error`);
+    return NextResponse.json({ error: 'invalid' }, { status: 400 });
   }
   
   const record = verificationTokens[token];
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   
   if (!record) {
     console.log('❌ Token not found in verificationTokens');
-    return NextResponse.redirect(`${origin}/login?verify=invalid`);
+    return NextResponse.json({ error: 'invalid' }, { status: 400 });
   }
   
   console.log('⏰ Token expires at:', new Date(record.expires));
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   if (Date.now() > record.expires) {
     console.log('❌ Token expired');
     delete verificationTokens[token];
-    return NextResponse.redirect(`${origin}/login?verify=expired`);
+    return NextResponse.json({ error: 'expired' }, { status: 400 });
   }
   
   // Find user and set emailVerified
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   if (!user) {
     console.log('❌ User not found for email:', record.email);
     delete verificationTokens[token];
-    return NextResponse.redirect(`${origin}/login?verify=error`);
+    return NextResponse.json({ error: 'invalid' }, { status: 400 });
   }
   
   console.log('✅ Verifying user email');
@@ -58,5 +58,5 @@ export async function GET(req: NextRequest) {
   console.log('📊 Remaining tokens:', Object.keys(verificationTokens));
   console.log('👥 Updated users:', users.map(u => ({ email: u.email, verified: u.emailVerified })));
   
-  return NextResponse.redirect(`${origin}/login?verify=success`);
+  return NextResponse.json({ success: true, message: 'Email verified successfully' });
 } 

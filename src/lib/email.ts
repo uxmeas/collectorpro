@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 
 export async function sendVerificationEmail(email: string, token: string): Promise<boolean> {
   try {
-    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://collectorpro.vercel.app'}/api/auth/verify-email?token=${token}`;
+    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://collectorpro.vercel.app'}/verify-email/${token}`;
     
     const mailOptions = {
       from: `"CollectorPRO" <${process.env.SMTP_USER}>`,
