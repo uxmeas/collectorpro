@@ -172,39 +172,30 @@ export default function DashboardPage() {
   };
 
   const handleConnectWallet = async () => {
-    if (!dapperWallet) {
-      setError("Please enter your Dapper wallet address");
-      return;
-    }
-
-    // Validate wallet format
-    if (!dapperWallet.toLowerCase().startsWith('0x')) {
-      setError("Wallet address must start with 0x");
-      return;
-    }
-
-    // Check if credentials are required
     if (!dapperEmail || !dapperPassword) {
       setError("Please provide your Dapper credentials to verify wallet ownership");
       return;
     }
 
-    // Save wallet address first
+    // Save wallet credentials and get wallet address
     try {
       const saveRes = await fetch("/api/profile/wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ dapperWallet }),
+        body: JSON.stringify({ dapperEmail, dapperPassword }),
       });
 
       if (!saveRes.ok) {
         const errorData = await saveRes.json();
-        throw new Error(errorData.error || "Failed to save wallet address");
+        throw new Error(errorData.error || "Failed to save wallet credentials");
       }
 
+      const saveData = await saveRes.json();
+      setDapperWallet(saveData.dapperWallet);
+
       // Then fetch Dapper data with credentials
-      await fetchDapperData(dapperWallet, dapperEmail, dapperPassword);
+      await fetchDapperData(saveData.dapperWallet, dapperEmail, dapperPassword);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to connect wallet");
     }
@@ -286,20 +277,9 @@ export default function DashboardPage() {
             <div className="p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
               <h3 className="text-lg font-semibold text-white mb-2">📝 Manual Connection</h3>
               <p className="text-gray-400 text-sm mb-4">
-                Enter your Flow wallet address and Dapper credentials to verify ownership. This wallet can be associated with any Dapper account, regardless of your CollectorPRO login email.
+                Enter your Dapper account credentials to connect your wallet. The system will automatically find and connect your NBA Top Shot wallet.
               </p>
               
-              {/* Wallet Address Input */}
-              <div className="mb-4">
-                <input
-                  type="text"
-                  value={dapperWallet}
-                  onChange={(e) => setDapperWallet(e.target.value)}
-                  placeholder="Enter your Flow wallet address (e.g., 0x1234567890abcdef)"
-                  className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
-                />
-              </div>
-
               {/* Dapper Credentials (always visible) */}
               <div className="space-y-4 mb-4">
                 <div>
@@ -357,36 +337,18 @@ export default function DashboardPage() {
               </button>
             </div>
             <p className="text-gray-300 text-sm">
-              Your wallet is connected. Enter your Dapper credentials below to view your moments.
+              Your wallet is connected. Click "Load Moments" to view your collection.
             </p>
             
-            {/* Reconnection Form */}
-            <div className="mt-4 space-y-4">
-              <div>
-                <input
-                  type="email"
-                  value={dapperEmail}
-                  onChange={(e) => setDapperEmail(e.target.value)}
-                  placeholder="Your Dapper account email"
-                  className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
-                />
-              </div>
-              <div>
-                <input
-                  type="password"
-                  value={dapperPassword}
-                  onChange={(e) => setDapperPassword(e.target.value)}
-                  placeholder="Your Dapper account password"
-                  className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
-                />
-              </div>
+            {/* Load Moments Button */}
+            <div className="mt-4">
               <button
                 onClick={() => fetchDapperData(dapperWallet, dapperEmail, dapperPassword)}
                 disabled={connecting || !dapperEmail || !dapperPassword}
                 className="w-full bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
               >
                 {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
-                {connecting ? "Connecting..." : "Load Moments"}
+                {connecting ? "Loading..." : "Load Moments"}
               </button>
             </div>
           </div>

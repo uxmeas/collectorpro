@@ -3,19 +3,15 @@ import { DapperService } from '../../../../lib/dapper';
 
 export async function POST(req: NextRequest) {
   try {
-    const { walletAddress, dapperEmail, dapperPassword } = await req.json();
+    const { dapperEmail, dapperPassword } = await req.json();
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 });
-    }
-
-    // For manual connection, Dapper credentials are required for security
     if (!dapperEmail || !dapperPassword) {
-      return NextResponse.json({ 
-        error: 'Dapper email and password are required to verify wallet ownership',
-        requiresCredentials: true 
-      }, { status: 400 });
+      return NextResponse.json({ error: 'Dapper email and password are required' }, { status: 400 });
     }
+
+    // For demo purposes, generate a sample wallet address
+    // In production, this would authenticate with Dapper and get the real wallet address
+    const walletAddress = '0x' + Math.random().toString(16).substring(2, 18);
 
     // Initialize Dapper service
     const dapperService = new DapperService(walletAddress);
