@@ -34,7 +34,6 @@ export default function DashboardPage() {
   const [dapperWallet, setDapperWallet] = useState("");
   const [dapperEmail, setDapperEmail] = useState("");
   const [dapperPassword, setDapperPassword] = useState("");
-  const [showCredentials, setShowCredentials] = useState(false);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [moments, setMoments] = useState<DapperMoment[]>([]);
@@ -115,7 +114,6 @@ export default function DashboardPage() {
       if (!response.ok) {
         const errorData = await response.json();
         if (errorData.requiresCredentials) {
-          setShowCredentials(true);
           setError("Please provide your Dapper credentials to verify wallet ownership");
           return;
         }
@@ -128,7 +126,6 @@ export default function DashboardPage() {
         setMoments(data.data.moments);
         setPortfolio(data.data.portfolio);
         setLastUpdated(data.data.lastUpdated);
-        setShowCredentials(false); // Hide credentials form on success
       } else {
         throw new Error(data.error || "Failed to fetch Dapper data");
       }
@@ -190,7 +187,6 @@ export default function DashboardPage() {
 
     // Check if credentials are required
     if (!dapperEmail || !dapperPassword) {
-      setShowCredentials(true);
       setError("Please provide your Dapper credentials to verify wallet ownership");
       return;
     }
@@ -306,32 +302,30 @@ export default function DashboardPage() {
                 />
               </div>
 
-              {/* Dapper Credentials */}
-              {showCredentials && (
-                <div className="space-y-4 mb-4">
-                  <div>
-                    <input
-                      type="email"
-                      value={dapperEmail}
-                      onChange={(e) => setDapperEmail(e.target.value)}
-                      placeholder="Your Dapper account email"
-                      className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
-                    />
-                  </div>
-                  <div>
-                    <input
-                      type="password"
-                      value={dapperPassword}
-                      onChange={(e) => setDapperPassword(e.target.value)}
-                      placeholder="Your Dapper account password"
-                      className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
-                    />
-                  </div>
-                  <p className="text-yellow-400 text-sm">
-                    🔒 Your Dapper credentials are only used to verify wallet ownership and are not stored.
-                  </p>
+              {/* Dapper Credentials (always visible) */}
+              <div className="space-y-4 mb-4">
+                <div>
+                  <input
+                    type="email"
+                    value={dapperEmail}
+                    onChange={(e) => setDapperEmail(e.target.value)}
+                    placeholder="Your Dapper account email"
+                    className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
+                  />
                 </div>
-              )}
+                <div>
+                  <input
+                    type="password"
+                    value={dapperPassword}
+                    onChange={(e) => setDapperPassword(e.target.value)}
+                    placeholder="Your Dapper account password"
+                    className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
+                  />
+                </div>
+                <p className="text-yellow-400 text-sm">
+                  🔒 Your Dapper credentials are only used to verify wallet ownership and are not stored.
+                </p>
+              </div>
 
               <button
                 onClick={handleConnectWallet}
