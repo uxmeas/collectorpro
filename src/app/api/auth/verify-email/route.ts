@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   }
   
   // Find user and set emailVerified
-  const user = users.find((u: any) => u.email === record.email);
+  const user = users.find((u) => u.email === record.email);
   console.log('👤 User found:', user ? { email: user.email, verified: user.emailVerified } : 'Not found');
   
   if (!user) {
