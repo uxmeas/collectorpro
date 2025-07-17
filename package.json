@@ -1,6 +1,6 @@
 {
   "name": "collectorpro",
-  "version": "10",
+  "version": "10.1",
   "private": true,
   "engines": {
     "node": ">=18.0.0"
