@@ -32,6 +32,9 @@ export default function DashboardPage() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState("");
   const [dapperWallet, setDapperWallet] = useState("");
+  const [dapperEmail, setDapperEmail] = useState("");
+  const [dapperPassword, setDapperPassword] = useState("");
+  const [showCredentials, setShowCredentials] = useState(false);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [moments, setMoments] = useState<DapperMoment[]>([]);
@@ -84,17 +87,39 @@ export default function DashboardPage() {
     loadDashboard();
   }, [router]);
 
-  const fetchDapperData = async (walletAddress: string) => {
+  const fetchDapperData = async (walletAddress: string, email?: string, password?: string) => {
     try {
       setConnecting(true);
       setError("");
 
-      const response = await fetch(`/api/dapper/connect?address=${walletAddress}`, {
-        credentials: "include",
-      });
+      let response;
+      if (email && password) {
+        // Manual connection with credentials
+        response = await fetch(`/api/dapper/connect`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            walletAddress,
+            dapperEmail: email,
+            dapperPassword: password
+          }),
+        });
+      } else {
+        // OAuth connection (no credentials needed)
+        response = await fetch(`/api/dapper/connect?address=${walletAddress}`, {
+          credentials: "include",
+        });
+      }
 
       if (!response.ok) {
-        throw new Error("Failed to connect to Dapper wallet");
+        const errorData = await response.json();
+        if (errorData.requiresCredentials) {
+          setShowCredentials(true);
+          setError("Please provide your Dapper credentials to verify wallet ownership");
+          return;
+        }
+        throw new Error(errorData.error || "Failed to connect to Dapper wallet");
       }
 
       const data = await response.json();
@@ -103,11 +128,12 @@ export default function DashboardPage() {
         setMoments(data.data.moments);
         setPortfolio(data.data.portfolio);
         setLastUpdated(data.data.lastUpdated);
+        setShowCredentials(false); // Hide credentials form on success
       } else {
         throw new Error(data.error || "Failed to fetch Dapper data");
       }
     } catch (err) {
-      setError("Failed to connect to Dapper wallet. Please check your wallet address.");
+      setError(err instanceof Error ? err.message : "Failed to connect to Dapper wallet. Please check your wallet address and credentials.");
       console.error("Dapper connection error:", err);
     } finally {
       setConnecting(false);
@@ -156,6 +182,19 @@ export default function DashboardPage() {
       return;
     }
 
+    // Validate wallet format
+    if (!dapperWallet.toLowerCase().startsWith('0x')) {
+      setError("Wallet address must start with 0x");
+      return;
+    }
+
+    // Check if credentials are required
+    if (!dapperEmail || !dapperPassword) {
+      setShowCredentials(true);
+      setError("Please provide your Dapper credentials to verify wallet ownership");
+      return;
+    }
+
     // Save wallet address first
     try {
       const saveRes = await fetch("/api/profile/wallet", {
@@ -166,13 +205,14 @@ export default function DashboardPage() {
       });
 
       if (!saveRes.ok) {
-        throw new Error("Failed to save wallet address");
+        const errorData = await saveRes.json();
+        throw new Error(errorData.error || "Failed to save wallet address");
       }
 
-      // Then fetch Dapper data
-      await fetchDapperData(dapperWallet);
-    } catch {
-      setError("Failed to connect wallet");
+      // Then fetch Dapper data with credentials
+      await fetchDapperData(dapperWallet, dapperEmail, dapperPassword);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to connect wallet");
     }
   };
 
@@ -252,25 +292,55 @@ export default function DashboardPage() {
             <div className="p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
               <h3 className="text-lg font-semibold text-white mb-2">📝 Manual Connection</h3>
               <p className="text-gray-400 text-sm mb-4">
-                Enter your Flow wallet address manually if you prefer. This wallet can be associated with any Dapper account, regardless of your CollectorPRO login email.
+                Enter your Flow wallet address and Dapper credentials to verify ownership. This wallet can be associated with any Dapper account, regardless of your CollectorPRO login email.
               </p>
-              <div className="flex gap-4">
+              
+              {/* Wallet Address Input */}
+              <div className="mb-4">
                 <input
                   type="text"
                   value={dapperWallet}
                   onChange={(e) => setDapperWallet(e.target.value)}
-                  placeholder="Enter your Dapper wallet address (0x...)"
-                  className="flex-1 px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
+                  placeholder="Enter your Flow wallet address (e.g., 0x1234567890abcdef)"
+                  className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
                 />
-                <button
-                  onClick={handleConnectWallet}
-                  disabled={connecting}
-                  className="bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
-                >
-                  {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
-                  {connecting ? "Connecting..." : "Connect Wallet"}
-                </button>
               </div>
+
+              {/* Dapper Credentials */}
+              {showCredentials && (
+                <div className="space-y-4 mb-4">
+                  <div>
+                    <input
+                      type="email"
+                      value={dapperEmail}
+                      onChange={(e) => setDapperEmail(e.target.value)}
+                      placeholder="Your Dapper account email"
+                      className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="password"
+                      value={dapperPassword}
+                      onChange={(e) => setDapperPassword(e.target.value)}
+                      placeholder="Your Dapper account password"
+                      className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
+                    />
+                  </div>
+                  <p className="text-yellow-400 text-sm">
+                    🔒 Your Dapper credentials are only used to verify wallet ownership and are not stored.
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={handleConnectWallet}
+                disabled={connecting}
+                className="w-full bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
+              >
+                {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
+                {connecting ? "Connecting..." : "Connect Wallet"}
+              </button>
             </div>
           </div>
         )}

@@ -33,8 +33,8 @@ export async function POST(req: NextRequest) {
     const { dapperWallet } = await req.json();
     
     // Validate wallet address format (basic check)
-    if (dapperWallet && !dapperWallet.startsWith('0x')) {
-      return NextResponse.json({ error: 'Invalid wallet address format' }, { status: 400 });
+    if (dapperWallet && !dapperWallet.toLowerCase().startsWith('0x')) {
+      return NextResponse.json({ error: 'Invalid wallet address format. Must start with 0x' }, { status: 400 });
     }
 
     // Save wallet address

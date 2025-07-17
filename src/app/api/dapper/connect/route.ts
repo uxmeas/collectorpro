@@ -3,17 +3,25 @@ import { DapperService } from '../../../../lib/dapper';
 
 export async function POST(req: NextRequest) {
   try {
-    const { walletAddress } = await req.json();
+    const { walletAddress, dapperEmail, dapperPassword } = await req.json();
 
     if (!walletAddress) {
       return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 });
     }
 
+    // For manual connection, Dapper credentials are required for security
+    if (!dapperEmail || !dapperPassword) {
+      return NextResponse.json({ 
+        error: 'Dapper email and password are required to verify wallet ownership',
+        requiresCredentials: true 
+      }, { status: 400 });
+    }
+
     // Initialize Dapper service
     const dapperService = new DapperService(walletAddress);
 
-    // Get user's moments
-    const moments = await dapperService.getUserMoments();
+    // Get user's moments with ownership verification
+    const moments = await dapperService.getUserMoments(dapperEmail, dapperPassword);
     
     // Get current market prices
     const momentIds = moments.map(m => m.id);
@@ -64,16 +72,26 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const walletAddress = searchParams.get('address');
+    const dapperEmail = searchParams.get('email');
+    const dapperPassword = searchParams.get('password');
 
     if (!walletAddress) {
       return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 });
     }
 
+    // For manual connection, Dapper credentials are required for security
+    if (!dapperEmail || !dapperPassword) {
+      return NextResponse.json({ 
+        error: 'Dapper email and password are required to verify wallet ownership',
+        requiresCredentials: true 
+      }, { status: 400 });
+    }
+
     // Initialize Dapper service
     const dapperService = new DapperService(walletAddress);
 
-    // Get user's moments
-    const moments = await dapperService.getUserMoments();
+    // Get user's moments with ownership verification
+    const moments = await dapperService.getUserMoments(dapperEmail, dapperPassword);
     
     // Calculate basic stats
     const totalValue = moments.reduce((sum, moment) => sum + (moment.currentValue || 0), 0);
