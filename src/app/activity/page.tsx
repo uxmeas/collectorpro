@@ -598,7 +598,7 @@ export default function ActivityPage() {
               {/* Proper HTML Table - Never stacks */}
               {!loading || moments.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1200px] border-collapse">
+                  <table className="w-full min-w-[1200px] border-collapse table-fixed">
                     {/* Table Header */}
                     <thead className="sticky top-0 bg-gray-900 border-b border-gray-700 z-10">
                       <tr>

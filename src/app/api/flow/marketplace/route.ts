@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
         locked: 25,
         listed: 2,
         sales: 45,
-        playerImage: 'https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/1630569.png',
+        playerImage: 'https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/1641705.png',
         teamName: 'San Antonio Spurs'
       },
       {
