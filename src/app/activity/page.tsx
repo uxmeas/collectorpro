@@ -86,6 +86,8 @@ export default function ActivityPage() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [isConnected, setIsConnected] = useState(false)
+  const [updateCount, setUpdateCount] = useState(0)
+  const [flashUpdates, setFlashUpdates] = useState<{[key: string]: boolean}>({})
   const wsRef = useRef<WebSocket | null>(null)
   
   const [searchTerm, setSearchTerm] = useState('')
@@ -140,12 +142,12 @@ export default function ActivityPage() {
         }
         
       } catch (error) {
-        console.log('🔌 WebSocket not available, using ultra-fast polling')
+        console.log('🔌 WebSocket not available, using INSTANT polling')
         setIsConnected(false)
-        // Fallback to 1-second polling for instant updates
+        // Fallback to 500ms polling for INSTANT updates
         const interval = setInterval(() => {
           fetchMarketplaceData(false)
-        }, 1000)
+        }, 500)
         return () => clearInterval(interval)
       }
     }
@@ -193,9 +195,29 @@ export default function ActivityPage() {
       const packData = packResponse.ok ? await packResponse.json() : { success: false }
       
       if (momentData.success) {
-        setMoments(momentData.data.moments || [])
+        const newMoments = momentData.data.moments || []
+        
+        // Flash updates for changed prices
+        setMoments(prev => {
+          const flashIds: {[key: string]: boolean} = {}
+          newMoments.forEach((newMoment: NBATopShotMoment) => {
+            const oldMoment = prev.find(m => m.id === newMoment.id)
+            if (oldMoment && (
+              Math.abs(oldMoment.lowAsk - newMoment.lowAsk) > 0.01 ||
+              oldMoment.listed !== newMoment.listed ||
+              oldMoment.sales !== newMoment.sales
+            )) {
+              flashIds[newMoment.id] = true
+            }
+          })
+          setFlashUpdates(flashIds)
+          setTimeout(() => setFlashUpdates({}), 1000) // Clear flash after 1s
+          return newMoments
+        })
+        
         setLastUpdate(new Date())
-        console.log(`✅ Loaded ${momentData.data.moments?.length || 0} live marketplace moments`)
+        setUpdateCount(prev => prev + 1)
+        console.log(`✅ Loaded ${newMoments.length} live marketplace moments (Update #${updateCount + 1})`)
       }
       
       if (packData.success) {
@@ -369,12 +391,13 @@ export default function ActivityPage() {
             ) : (
               <div className="flex items-center gap-2 text-yellow-400">
                 <WifiOff className="h-4 w-4 animate-pulse" />
-                <span className="text-xs">Ultra-Fast Polling</span>
+                <span className="text-xs">INSTANT (500ms)</span>
               </div>
             )}
-            <span className="text-xs text-gray-400">
-              Updated {formatRelativeTime(lastUpdate)}
-            </span>
+            <div className="text-xs text-gray-400">
+              <div>Updated {formatRelativeTime(lastUpdate)}</div>
+              <div className="text-green-400 font-mono">#{updateCount} updates</div>
+            </div>
           </div>
         </div>
         
@@ -643,7 +666,10 @@ export default function ActivityPage() {
                       {filteredMoments.map((moment) => (
                         <tr 
                           key={moment.id}
-                          className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
+                          className={cn(
+                            "border-b border-gray-800 hover:bg-gray-800/50 transition-all duration-1000",
+                            flashUpdates[moment.id] && "bg-green-500/20 animate-pulse"
+                          )}
                         >
                           {/* MOMENT - Player photo and name */}
                           <td className="py-3 px-4">
@@ -677,9 +703,15 @@ export default function ActivityPage() {
                           {/* LOW ASK - With price change indicator */}
                           <td className="py-3 px-2">
                             <div className="flex items-center gap-1">
-                              <span className="text-green-400 font-bold text-sm">
+                              <span className={cn(
+                                "font-bold text-sm transition-all duration-500",
+                                flashUpdates[moment.id] ? "text-yellow-400" : "text-green-400"
+                              )}>
                                 ${moment.lowAsk.toFixed(2)}
                               </span>
+                              {flashUpdates[moment.id] && (
+                                <span className="text-yellow-400 animate-bounce text-xs">●</span>
+                              )}
                               {moment.priceChange && (
                                 <span className={cn(
                                   "text-xs",
