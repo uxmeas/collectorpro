@@ -91,6 +91,94 @@ export async function GET(req: NextRequest) {
   }
 }
 
+export async function POST(req: NextRequest) {
+  try {
+    let body
+    try {
+      body = await req.json()
+    } catch (jsonError) {
+      console.error('❌ PORTFOLIO: Invalid JSON in request body:', jsonError)
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+
+    const { walletAddress, filters = {} } = body
+
+    if (!walletAddress) {
+      return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 });
+    }
+
+    console.log('🔍 PORTFOLIO: Fetching portfolio data for wallet:', walletAddress, 'with filters:', filters)
+
+    // Initialize Flow blockchain service
+    const flowService = new FlowBlockchainService(walletAddress);
+
+    // Get user's NBA Top Shot moments
+    const moments = await flowService.getNBATopShotMoments();
+    
+    // Get current market prices
+    const momentIds = moments.map(m => m.id);
+    const marketPrices = await flowService.getMarketPrices(momentIds);
+    
+    // Update moments with current prices
+    const updatedMoments = moments.map(moment => ({
+      ...moment,
+      currentValue: marketPrices[moment.id] || moment.currentValue || 0,
+    }));
+
+    // Apply filters if provided
+    const filteredMoments = applyPortfolioFilters(updatedMoments, filters);
+
+    // Calculate comprehensive portfolio analytics
+    const analytics = calculatePortfolioAnalytics(filteredMoments);
+
+    // Get real-time market data
+    const marketData = await flowService.getRealTimeMarketData();
+
+    console.log('✅ PORTFOLIO: Returning portfolio data for', filteredMoments.length, 'moments')
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        walletAddress,
+        portfolio: analytics,
+        marketData,
+        lastUpdated: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Portfolio analytics error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to fetch portfolio analytics',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, { status: 500 });
+  }
+}
+
+function applyPortfolioFilters(moments: any[], filters: any) {
+  let filtered = [...moments];
+  
+  if (filters.rarity && filters.rarity.length > 0) {
+    filtered = filtered.filter(moment => filters.rarity.includes(moment.rarity));
+  }
+  
+  if (filters.team && filters.team.length > 0) {
+    filtered = filtered.filter(moment => filters.team.includes(moment.teamName));
+  }
+  
+  if (filters.player && filters.player.length > 0) {
+    filtered = filtered.filter(moment => filters.player.includes(moment.playerName));
+  }
+  
+  if (filters.set && filters.set.length > 0) {
+    filtered = filtered.filter(moment => filters.set.includes(moment.metadata?.set));
+  }
+  
+  return filtered;
+}
+
 function calculatePortfolioAnalytics(moments: any[]): PortfolioAnalytics {
   const totalValue = moments.reduce((sum, moment) => sum + (moment.currentValue || 0), 0);
   const totalAcquisitionCost = moments.reduce((sum, moment) => sum + (moment.acquisitionPrice || 0), 0);

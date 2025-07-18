@@ -53,11 +53,14 @@ export default function ActivityPage() {
   const [moments, setMoments] = useState<NBATopShotMoment[]>([])
   const [packs, setPacks] = useState<PackActivity[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [isConnected, setIsConnected] = useState(false)
   const [updateCount, setUpdateCount] = useState(0)
   const [flashUpdates, setFlashUpdates] = useState<{[key: string]: boolean}>({})
+  const [hasNextPage, setHasNextPage] = useState(true)
+  const [currentOffset, setCurrentOffset] = useState(0)
   const wsRef = useRef<WebSocket | null>(null)
   
   const [searchTerm, setSearchTerm] = useState('')
@@ -132,12 +135,14 @@ export default function ActivityPage() {
   }, [])
 
   // Fetch initial marketplace data and pack activity
-  const fetchMarketplaceData = async (showLoading = true) => {
+  const fetchMarketplaceData = async (showLoading = true, loadMore = false) => {
     try {
-      if (showLoading) setLoading(true)
+      if (showLoading && !loadMore) setLoading(true)
+      if (loadMore) setLoadingMore(true)
       setError(null)
 
-      console.log('🔄 Fetching live NBA TopShot marketplace data...')
+      const offset = loadMore ? currentOffset : 0
+      console.log('🔄 Fetching live NBA TopShot marketplace data...', { offset, loadMore })
       
       const [momentResponse, packResponse] = await Promise.all([
         fetch('/api/flow/marketplace', {
@@ -149,12 +154,11 @@ export default function ActivityPage() {
               league: leagueFilter,
               ...filters
             },
-            limit: 50
+            limit: 50,
+            offset
           })
         }),
-        fetch('/api/flow/packs', {
-          method: 'GET'
-        })
+        !loadMore ? fetch('/api/flow/packs', { method: 'GET' }) : Promise.resolve({ ok: false })
       ])
       
       if (!momentResponse.ok) {
@@ -162,38 +166,51 @@ export default function ActivityPage() {
       }
       
       const momentData = await momentResponse.json()
-      const packData = packResponse.ok ? await packResponse.json() : { success: false }
+      let packData = { success: false }
+      if (!loadMore && 'ok' in packResponse && packResponse.ok) {
+        packData = await (packResponse as Response).json()
+      }
       
       if (momentData.success) {
         const newMoments = momentData.data.moments || []
+        const { hasNextPage: apiHasNext, nextOffset } = momentData.data
         
-        // Flash updates for changed prices
-        setMoments(prev => {
-          const flashIds: {[key: string]: boolean} = {}
-          newMoments.forEach((newMoment: NBATopShotMoment) => {
-            const oldMoment = prev.find(m => m.id === newMoment.id)
-            if (oldMoment && (
-              Math.abs(oldMoment.lowAsk - newMoment.lowAsk) > 0.01 ||
-              oldMoment.listed !== newMoment.listed ||
-              oldMoment.sales !== newMoment.sales
-            )) {
-              flashIds[newMoment.id] = true
-            }
+        setHasNextPage(apiHasNext)
+        setCurrentOffset(nextOffset || offset + newMoments.length)
+        
+        if (loadMore) {
+          // Append to existing moments for endless scroll
+          setMoments(prev => [...prev, ...newMoments])
+          console.log(`✅ Loaded ${newMoments.length} more moments (Total: ${moments.length + newMoments.length})`)
+        } else {
+          // Replace moments for initial load or refresh
+          setMoments(prev => {
+            const flashIds: {[key: string]: boolean} = {}
+            newMoments.forEach((newMoment: NBATopShotMoment) => {
+              const oldMoment = prev.find(m => m.id === newMoment.id)
+              if (oldMoment && (
+                Math.abs(oldMoment.lowAsk - newMoment.lowAsk) > 0.01 ||
+                oldMoment.listed !== newMoment.listed ||
+                oldMoment.sales !== newMoment.sales
+              )) {
+                flashIds[newMoment.id] = true
+              }
+            })
+            setFlashUpdates(flashIds)
+            setTimeout(() => setFlashUpdates({}), 1000) // Clear flash after 1s
+            return newMoments
           })
-          setFlashUpdates(flashIds)
-          setTimeout(() => setFlashUpdates({}), 1000) // Clear flash after 1s
-          return newMoments
-        })
-        
-        setLastUpdate(new Date())
-        setUpdateCount(prev => prev + 1)
-        console.log(`✅ Loaded ${newMoments.length} live marketplace moments (Update #${updateCount + 1})`)
+          
+          setLastUpdate(new Date())
+          setUpdateCount(prev => prev + 1)
+          console.log(`✅ Loaded ${newMoments.length} live marketplace moments (Update #${updateCount + 1})`)
+        }
       }
       
-      if (packData.success) {
-        setPacks(packData.data.packs || [])
-        console.log(`✅ Loaded ${packData.data.packs?.length || 0} pack activities`)
-      } else {
+      if (packData.success && 'data' in packData) {
+        setPacks((packData as any).data.packs || [])
+        console.log(`✅ Loaded ${(packData as any).data.packs?.length || 0} pack activities`)
+      } else if (!loadMore) {
         // Fallback pack data
         setPacks([
           {
@@ -206,7 +223,7 @@ export default function ActivityPage() {
             openedBy: '@LeBronFan23',
             timestamp: new Date(Date.now() - 300000),
             contents: ['LeBron James Legendary', 'Stephen Curry Rare', '3 Common moments'],
-            packImage: '/api/placeholder/48/48'
+            packImage: 'https://assets.nbatopshot.com/resize/packs/championship_edition_2025.jpg?format=webp&quality=80&width=200'
           },
           {
             id: '2',
@@ -218,7 +235,7 @@ export default function ActivityPage() {
             openedBy: '@VictorFan',
             timestamp: new Date(Date.now() - 600000),
             contents: ['Victor Wembanyama Rare', '2 Common moments'],
-            packImage: '/api/placeholder/48/48'
+            packImage: 'https://assets.nbatopshot.com/resize/packs/rookie_sensations_2025.jpg?format=webp&quality=80&width=200'
           }
         ])
       }
@@ -231,6 +248,8 @@ export default function ActivityPage() {
       setMoments([
         {
           id: '1',
+          momentId: '1',
+          editionName: 'Series 2024-25 Common',
           playerName: 'SHAI GILGEOUS-ALEXANDER',
           playDescription: 'Thunder 2024',
           setName: 'Series 2024-25',
@@ -252,7 +271,9 @@ export default function ActivityPage() {
           priceChange: (Math.random() - 0.5) * 10
         },
         {
-          id: '2', 
+          id: '2',
+          momentId: '2',
+          editionName: 'Series 2024-25 Rare',
           playerName: 'GIANNIS ANTETOKOUNMPO',
           playDescription: 'Bucks 2024',
           setName: 'Series 2024-25',
@@ -275,6 +296,8 @@ export default function ActivityPage() {
         },
         {
           id: '3',
+          momentId: '3',
+          editionName: 'Series 2024-25 Ultimate',
           playerName: 'VICTOR WEMBANYAMA', 
           playDescription: 'Spurs 2024',
           setName: 'Series 2024-25',
@@ -298,17 +321,28 @@ export default function ActivityPage() {
       ])
     } finally {
       setLoading(false)
+      setLoadingMore(false)
+    }
+  }
+
+  // Load more data for endless scroll
+  const loadMoreData = async () => {
+    if (!loadingMore && hasNextPage && !loading) {
+      await fetchMarketplaceData(false, true)
     }
   }
 
   // Initial load
   useEffect(() => {
+    setCurrentOffset(0)
     fetchMarketplaceData()
   }, [])
 
-  // Refetch when filters change
+  // Refetch when filters change (reset pagination)
   useEffect(() => {
     if (!loading) {
+      setCurrentOffset(0)
+      setHasNextPage(true)
       fetchMarketplaceData()
     }
   }, [filters, searchTerm, leagueFilter])
@@ -575,7 +609,7 @@ export default function ActivityPage() {
             </div>
           )}
 
-          {/* MOMENTS Tab - TanStack Table v8 */}
+          {/* MOMENTS Tab - TanStack Table v8 with Endless Scroll */}
           {activeTab === 'MOMENTS' && (
             <div className="w-full p-6">
               <UnifiedTable
@@ -589,7 +623,41 @@ export default function ActivityPage() {
                 searchPlaceholder="Search moments..."
                 emptyStateMessage="No moments found. Try adjusting your filters."
                 loadingMessage="Loading live marketplace data..."
+                loading={loading}
+                containerHeight={650}
               />
+              
+              {/* Endless Scroll Controls */}
+              <div className="mt-6 flex flex-col items-center gap-4">
+                {hasNextPage && (
+                  <Button
+                    onClick={loadMoreData}
+                    disabled={loadingMore}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Loading More...
+                      </>
+                    ) : (
+                      'Load More Moments'
+                    )}
+                  </Button>
+                )}
+                
+                {!hasNextPage && filteredMoments.length > 0 && (
+                  <p className="text-gray-400 text-sm">
+                    All {filteredMoments.length} moments loaded
+                  </p>
+                )}
+                
+                {filteredMoments.length > 20 && (
+                  <p className="text-gray-500 text-xs">
+                    Showing {filteredMoments.length} moments • Auto-updating every 500ms
+                  </p>
+                )}
+              </div>
             </div>
           )}
 

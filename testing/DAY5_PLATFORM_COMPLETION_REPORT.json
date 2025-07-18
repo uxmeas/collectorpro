@@ -1,0 +1,176 @@
+{
+  "timestamp": "2025-07-18T16:24:24.140Z",
+  "scores": {
+    "edgeCases": 25,
+    "browserCompatibility": 100,
+    "mobileExperience": 21.365000000000002,
+    "performance": null
+  },
+  "results": {
+    "edgeCases": {
+      "errorHandling": 0,
+      "networkFailures": 0,
+      "invalidInputs": 0,
+      "boundaryConditions": 1
+    },
+    "browserCompatibility": {
+      "chromium": {
+        "score": 100,
+        "issues": []
+      },
+      "firefox": {
+        "score": 100,
+        "issues": []
+      },
+      "webkit": {
+        "score": 100,
+        "issues": []
+      }
+    },
+    "mobileExperience": {
+      "touchTargets": 0,
+      "responsiveDesign": 0,
+      "performance": 85.46000000000001,
+      "accessibility": 0
+    },
+    "performance": {
+      "pageLoadTimes": [
+        {
+          "page": "/",
+          "loadTime": 13545,
+          "score": 0
+        },
+        {
+          "page": "/dashboard",
+          "loadTime": 14681,
+          "score": 0
+        },
+        {
+          "page": "/marketplace",
+          "loadTime": 674,
+          "score": 77.53333333333333
+        },
+        {
+          "page": "/pricing",
+          "loadTime": 833,
+          "score": 72.23333333333333
+        },
+        {
+          "page": "/login",
+          "loadTime": 895,
+          "score": 70.16666666666667
+        },
+        {
+          "page": "/register",
+          "loadTime": 646,
+          "score": 78.46666666666667
+        }
+      ],
+      "apiResponseTimes": [
+        {
+          "endpoint": "/api/flow/marketplace",
+          "responseTime": 145,
+          "status": 200,
+          "score": 71
+        },
+        {
+          "endpoint": "/api/flow/collections",
+          "responseTime": 102,
+          "status": 200,
+          "score": 79.6
+        },
+        {
+          "endpoint": "/api/flow/packs",
+          "responseTime": 98,
+          "status": 200,
+          "score": 80.4
+        },
+        {
+          "endpoint": "/api/flow/transactions",
+          "responseTime": 144,
+          "status": 200,
+          "score": 71.2
+        }
+      ],
+      "memoryUsage": [
+        {
+          "used": 21.52346134185791,
+          "total": 51.536396980285645,
+          "limit": 4095.75,
+          "score": 89.23826932907104
+        }
+      ],
+      "imageOptimization": null
+    }
+  },
+  "testResults": {
+    "edgeCases": {
+      "errors": [],
+      "networkIssues": [],
+      "inputValidation": [],
+      "boundaries": []
+    },
+    "browserTests": {
+      "chromium": [],
+      "firefox": [],
+      "webkit": []
+    },
+    "mobileTests": {
+      "touchTargets": [],
+      "responsive": [],
+      "performance": [],
+      "accessibility": []
+    },
+    "performanceTests": {
+      "pageLoad": [],
+      "apiCalls": [],
+      "memory": [],
+      "images": []
+    }
+  },
+  "config": {
+    "baseUrl": "http://localhost:3000",
+    "browsers": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "viewports": [
+      {
+        "width": 1920,
+        "height": 1080,
+        "name": "Desktop"
+      },
+      {
+        "width": 768,
+        "height": 1024,
+        "name": "Tablet"
+      },
+      {
+        "width": 375,
+        "height": 667,
+        "name": "Mobile"
+      }
+    ],
+    "testPages": [
+      "/",
+      "/dashboard",
+      "/marketplace",
+      "/pricing",
+      "/login",
+      "/register"
+    ],
+    "performanceThresholds": {
+      "pageLoad": 3000,
+      "apiResponse": 500,
+      "imageLoad": 2000,
+      "memoryUsage": 100
+    }
+  },
+  "recommendations": {
+    "edgeCases": true,
+    "browserCompatibility": false,
+    "mobileExperience": true,
+    "performance": false
+  }
+}

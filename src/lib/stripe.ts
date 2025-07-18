@@ -78,6 +78,23 @@ export const SUBSCRIPTION_PLANS = {
   }
 }
 
+// Trial period configuration
+export const TRIAL_CONFIG = {
+  duration: 7, // days
+  enabled: true,
+  requirePaymentMethod: false, // Allow trial without card
+  trialEndBehavior: 'cancel' // What happens when trial ends
+}
+
+// Payment error handling configuration
+export const PAYMENT_ERROR_CONFIG = {
+  retryAttempts: 3,
+  retryDelay: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+  gracePeriod: 3, // days after failed payment
+  dunningManagement: true, // Enable Stripe's dunning management
+  automaticRetries: true
+}
+
 // Utility functions
 export const formatPrice = (price: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -96,20 +113,40 @@ export const createStripeCustomer = async (email: string, name?: string) => {
     email,
     name,
     metadata: {
-      product: 'CollectorPRO NBA Top Shot Analytics'
+      product: 'CollectorPRO NBA Top Shot Analytics',
+      source: 'web_signup'
     }
   })
 }
 
-// Create subscription
-export const createSubscription = async (customerId: string, priceId: string) => {
-  return await stripe.subscriptions.create({
+// Create subscription with trial support
+export const createSubscription = async (
+  customerId: string, 
+  priceId: string, 
+  trialDays?: number
+) => {
+  const subscriptionData: Stripe.SubscriptionCreateParams = {
     customer: customerId,
     items: [{ price: priceId }],
     payment_behavior: 'default_incomplete',
-    payment_settings: { save_default_payment_method: 'on_subscription' },
+    payment_settings: { 
+      save_default_payment_method: 'on_subscription',
+      payment_method_types: ['card']
+    },
     expand: ['latest_invoice.payment_intent'],
-  })
+  }
+
+  // Add trial period if specified
+  if (trialDays && TRIAL_CONFIG.enabled) {
+    subscriptionData.trial_period_days = trialDays
+    subscriptionData.trial_settings = {
+      end_behavior: {
+        missing_payment_method: TRIAL_CONFIG.trialEndBehavior as 'cancel' | 'create_invoice' | 'pause'
+      }
+    }
+  }
+
+  return await stripe.subscriptions.create(subscriptionData)
 }
 
 // Create payment intent for one-time payments
@@ -128,14 +165,39 @@ export const createPaymentIntent = async (amount: number, customerId?: string) =
 export const getCustomerSubscriptions = async (customerId: string) => {
   return await stripe.subscriptions.list({
     customer: customerId,
-    status: 'active',
+    status: 'all', // Get all subscriptions including past due, canceled, etc.
+    expand: ['data.default_payment_method']
   })
 }
 
 // Cancel subscription
-export const cancelSubscription = async (subscriptionId: string) => {
+export const cancelSubscription = async (subscriptionId: string, cancelAtPeriodEnd: boolean = true) => {
+  if (cancelAtPeriodEnd) {
+    return await stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: true
+    })
+  } else {
+    return await stripe.subscriptions.cancel(subscriptionId)
+  }
+}
+
+// Reactivate subscription
+export const reactivateSubscription = async (subscriptionId: string) => {
   return await stripe.subscriptions.update(subscriptionId, {
-    cancel_at_period_end: true
+    cancel_at_period_end: false
+  })
+}
+
+// Update subscription (upgrade/downgrade)
+export const updateSubscription = async (subscriptionId: string, newPriceId: string) => {
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+  
+  return await stripe.subscriptions.update(subscriptionId, {
+    items: [{
+      id: subscription.items.data[0].id,
+      price: newPriceId,
+    }],
+    proration_behavior: 'create_prorations',
   })
 }
 
@@ -144,17 +206,19 @@ export const createBillingPortalSession = async (customerId: string, returnUrl: 
   return await stripe.billingPortal.sessions.create({
     customer: customerId,
     return_url: returnUrl,
+    configuration: process.env.STRIPE_PORTAL_CONFIGURATION_ID, // Optional: custom portal config
   })
 }
 
-// Create checkout session
+// Create checkout session with enhanced features
 export const createCheckoutSession = async (
   priceId: string,
   customerId?: string,
   successUrl?: string,
-  cancelUrl?: string
+  cancelUrl?: string,
+  trialDays?: number
 ) => {
-  return await stripe.checkout.sessions.create({
+  const sessionData: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
     line_items: [
       {
@@ -163,11 +227,92 @@ export const createCheckoutSession = async (
       },
     ],
     mode: 'subscription',
-    success_url: successUrl || `${process.env.NEXT_PUBLIC_DOMAIN}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_DOMAIN}/pricing`,
+    success_url: successUrl || `${process.env.NEXT_PUBLIC_DOMAIN}/dashboard?session_id={CHECKOUT_SESSION_ID}&success=true`,
+    cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_DOMAIN}/pricing?canceled=true`,
     allow_promotion_codes: true,
     billing_address_collection: 'required',
+    customer_update: {
+      address: 'auto',
+      name: 'auto',
+    },
+    subscription_data: {
+      metadata: {
+        product: 'CollectorPRO NBA Top Shot Analytics'
+      }
+    }
+  }
+
+  // Add trial period if specified
+  if (trialDays && TRIAL_CONFIG.enabled) {
+    sessionData.subscription_data!.trial_period_days = trialDays
+  }
+
+  return await stripe.checkout.sessions.create(sessionData)
+}
+
+// Handle payment failures
+export const handlePaymentFailure = async (invoiceId: string) => {
+  const invoice = await stripe.invoices.retrieve(invoiceId)
+  
+  // Configure dunning management if enabled
+  if (PAYMENT_ERROR_CONFIG.dunningManagement) {
+    await stripe.invoices.update(invoiceId, {
+      collection_method: 'charge_automatically',
+      payment_settings: {
+        payment_method_types: ['card']
+      }
+    })
+  }
+  
+  return invoice
+}
+
+// Get customer payment methods
+export const getCustomerPaymentMethods = async (customerId: string) => {
+  return await stripe.paymentMethods.list({
+    customer: customerId,
+    type: 'card'
   })
+}
+
+// Attach payment method to customer
+export const attachPaymentMethod = async (paymentMethodId: string, customerId: string) => {
+  return await stripe.paymentMethods.attach(paymentMethodId, {
+    customer: customerId
+  })
+}
+
+// Set default payment method
+export const setDefaultPaymentMethod = async (customerId: string, paymentMethodId: string) => {
+  return await stripe.customers.update(customerId, {
+    invoice_settings: {
+      default_payment_method: paymentMethodId
+    }
+  })
+}
+
+// Create invoice for manual billing
+export const createInvoice = async (customerId: string, priceId: string) => {
+  const invoice = await stripe.invoices.create({
+    customer: customerId,
+    collection_method: 'send_invoice',
+    days_until_due: 30
+  })
+  
+  // Add line items separately
+  await stripe.invoiceItems.create({
+    customer: customerId,
+    invoice: invoice.id,
+    price: priceId,
+    quantity: 1
+  })
+  
+  return invoice
+}
+
+// Send invoice to customer
+export const sendInvoice = async (invoiceId: string) => {
+  return await stripe.invoices.sendInvoice(invoiceId)
 }
 
 // Webhook event types
@@ -180,4 +325,66 @@ export const WEBHOOK_EVENTS = {
   INVOICE_FAILED: 'invoice.payment_failed',
   PAYMENT_SUCCEEDED: 'payment_intent.succeeded',
   PAYMENT_FAILED: 'payment_intent.payment_failed',
-} as const 
+  CUSTOMER_SUBSCRIPTION_TRIAL_WILL_END: 'customer.subscription.trial_will_end',
+  INVOICE_PAYMENT_ACTION_REQUIRED: 'invoice.payment_action_required',
+  CUSTOMER_SUBSCRIPTION_UPDATED: 'customer.subscription.updated'
+} as const
+
+// Subscription status helpers
+export const SUBSCRIPTION_STATUS = {
+  ACTIVE: 'active',
+  PAST_DUE: 'past_due',
+  CANCELED: 'canceled',
+  UNPAID: 'unpaid',
+  TRIALING: 'trialing',
+  INCOMPLETE: 'incomplete',
+  INCOMPLETE_EXPIRED: 'incomplete_expired'
+} as const
+
+// Check if subscription is active
+export const isSubscriptionActive = (status: string) => {
+  return [SUBSCRIPTION_STATUS.ACTIVE, SUBSCRIPTION_STATUS.TRIALING].includes(status as any)
+}
+
+// Check if subscription is in trial
+export const isSubscriptionTrialing = (status: string) => {
+  return status === SUBSCRIPTION_STATUS.TRIALING
+}
+
+// Check if subscription is past due
+export const isSubscriptionPastDue = (status: string) => {
+  return status === SUBSCRIPTION_STATUS.PAST_DUE
+}
+
+// Get subscription features based on plan
+export const getSubscriptionFeatures = (planId: string) => {
+  const plan = getPlanById(planId)
+  return plan?.features || []
+}
+
+// Get subscription limits based on plan
+export const getSubscriptionLimits = (planId: string) => {
+  const plan = getPlanById(planId)
+  return plan?.limits || {}
+}
+
+// Validate subscription access
+export const validateSubscriptionAccess = (
+  userPlan: string,
+  requiredFeature: string,
+  currentUsage?: number
+) => {
+  const limits = getSubscriptionLimits(userPlan)
+  
+  // Check if feature is unlimited
+  if (limits[requiredFeature as keyof typeof limits] === -1) {
+    return true
+  }
+  
+  // Check usage limits
+  if (currentUsage !== undefined && limits[requiredFeature as keyof typeof limits]) {
+    return currentUsage < (limits[requiredFeature as keyof typeof limits] as number)
+  }
+  
+  return true
+} 

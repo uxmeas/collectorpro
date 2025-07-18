@@ -17,4 +17,21 @@ export { Heading } from './Heading'
 export { Text } from './Text'
 
 // Icons
-export { Icon } from './Icon' 
+export { Icon } from './Icon'
+
+// Platform Branding
+export { PlatformBadge, PlatformBadgeCompact, PlatformIcon } from './PlatformBadge'
+
+// Mobile Accessibility
+export { TouchTarget, CTATouchTarget, NavTouchTarget, FormTouchTarget, useTouchTargetValidation } from './TouchTarget'
+
+// Dark Theme Optimization
+export { 
+  DarkText, 
+  DarkCard, 
+  DarkImageContainer, 
+  DarkButton, 
+  useDarkThemeContrast, 
+  DarkThemeProvider, 
+  useDarkThemeClasses 
+} from './DarkThemeOptimizer' 

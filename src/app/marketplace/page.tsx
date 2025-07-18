@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { NBATopShotMoment, FilterCriteria, SortCriteria, SearchOptions } from '../../lib/nba-topshot-types'
+import { MarketplaceDisclaimer } from '@/components/ui/LegalDisclaimer'
 
 export default function MarketplaceDashboard() {
   const router = useRouter()
@@ -300,6 +301,9 @@ export default function MarketplaceDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Legal Disclaimer */}
+        <MarketplaceDisclaimer />
+        
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-[#23272A]/80 rounded-xl p-6 border border-[#333] shadow-lg">

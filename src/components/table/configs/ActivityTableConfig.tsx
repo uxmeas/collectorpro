@@ -13,11 +13,13 @@ import { Badge } from "@/components/ui/badge"
 // NBA TopShot Moment interface for marketplace activity
 export interface NBATopShotMoment {
   id: string
+  momentId: string  // UUID for NBA TopShot moment
+  editionName: string  // Edition identifier for NBA TopShot assets
   playerName: string
   playDescription: string
   setName: string
   series: string
-  rarity: 'Common' | 'Rare' | 'Legendary' | 'Ultimate'
+  rarity: 'Common' | 'Fandom' | 'Rare' | 'Legendary' | 'Ultimate'
   circulation: number
   serialNumber: number
   supply: number
@@ -29,7 +31,7 @@ export interface NBATopShotMoment {
   locked: number
   listed: number
   sales: number
-  playerImage: string
+  playerImage: string  // NBA TopShot moment image URL
   teamName: string
   lastSalePrice?: number
   priceChange?: number
@@ -63,7 +65,7 @@ export const activityTableColumns: ColumnDef<NBATopShotMoment>[] = [
             alt={row.original.playerName}
             className="w-full h-full object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/api/placeholder/48/48'
+              (e.target as HTMLImageElement).src = `https://picsum.photos/48/48?random=${Math.floor(Math.random() * 1000)}`
             }}
           />
         </div>
@@ -81,6 +83,38 @@ export const activityTableColumns: ColumnDef<NBATopShotMoment>[] = [
     enableSorting: true,
     sortingFn: (rowA, rowB) => {
       return rowA.original.playerName.localeCompare(rowB.original.playerName)
+    }
+  },
+  {
+    id: 'rarity',
+    header: 'RARITY',
+    accessorKey: 'rarity',
+    cell: ({ row }) => (
+      <div className="flex flex-col items-center justify-center gap-1 py-2 min-w-[120px]">
+        <Badge 
+          variant="outline"
+          className={`
+            text-xs font-bold border-2 px-2 py-1 whitespace-nowrap ${
+            row.original.rarity === 'Ultimate' ? 'bg-purple-900 border-purple-500 text-purple-300' :
+            row.original.rarity === 'Legendary' ? 'bg-orange-900 border-orange-500 text-orange-300' :
+            row.original.rarity === 'Rare' ? 'bg-blue-900 border-blue-500 text-blue-300' :
+            row.original.rarity === 'Fandom' ? 'bg-green-900 border-green-500 text-green-300' :
+            'bg-gray-800 border-gray-500 text-gray-300'
+          }`}
+        >
+          {row.original.rarity.toUpperCase()}
+        </Badge>
+        <div className="text-white text-xs font-mono text-center leading-tight">
+          <div className="font-semibold">#{row.original.serialNumber}/{row.original.supply}</div>
+          <div className="text-gray-400 text-[10px] mt-1">(LE)</div>
+        </div>
+      </div>
+    ),
+    size: 140,
+    enableSorting: true,
+    sortingFn: (rowA, rowB) => {
+      const rarityOrder = { 'Common': 0, 'Fandom': 1, 'Rare': 2, 'Legendary': 3, 'Ultimate': 4 }
+      return rarityOrder[rowA.original.rarity] - rarityOrder[rowB.original.rarity]
     }
   },
   {

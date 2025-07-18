@@ -1701,8 +1701,7 @@ export class EnhancedFlowBlockchainService {
         portfolioRank: index + 1,
         isTopHolding: index < 5,
         isWorstHolding: index >= 20,
-        isBestPerformer: data.gainLoss > 100,
-        isWorstPerformer: data.gainLoss < -100
+        daysSinceAcquisition: Math.floor((now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24))
       }
     }
   }

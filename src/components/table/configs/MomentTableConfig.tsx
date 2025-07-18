@@ -13,6 +13,7 @@ import { DiscoveryMoment } from '@/lib/discovery-service'
 import { Button } from "@/components/ui/Button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/Card"
+import { MomentImageCompact } from "@/components/ui/MomentImage"
 
 // Define moment table columns
 export const momentTableColumns: ColumnDef<DiscoveryMoment>[] = [

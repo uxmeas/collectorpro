@@ -1,3 +1,12 @@
+// Generate actual NBA TopShot moment image URLs using real CDN
+function generateNBATopShotImageURL(momentId: string, editionName: string, size: number = 161): string {
+  // Real NBA TopShot CDN URL pattern
+  const cleanMomentId = momentId.replace(/[^a-zA-Z0-9-]/g, '')
+  const cleanEditionName = editionName?.replace(/[^a-zA-Z0-9_]/g, '') || 'common'
+  
+  return `https://assets.nbatopshot.com/resize/editions/${cleanEditionName}/${cleanMomentId}/play_${cleanMomentId}_${cleanEditionName}_capture_Hero_2880_2880_Black.jpg?format=webp&quality=80&width=${size}&cv=1`
+}
+
 interface UserProfile {
   wallet: string
   username: string
@@ -105,7 +114,7 @@ export class ProfileService {
     const baseValue = Math.random() * 150000 + 50000
     const points = this.getDataPointsForPeriod(period)
     
-    const data: PortfolioData[] = points.map((time, index) => ({
+    const data: PortfolioData[] = points.map((time: any, index: number) => ({
       timestamp: time.label,
       time: time.value,
       value: baseValue + (Math.random() - 0.5) * 10000 + (index * 500)
@@ -182,7 +191,7 @@ export class ProfileService {
     return percentages[Math.floor(Math.random() * percentages.length)]
   }
 
-  private getDataPointsForPeriod(period: string) {
+  private getDataPointsForPeriod(period: string): { label: string; value: string }[] {
     const now = new Date()
     const points = []
 
@@ -231,7 +240,7 @@ export class ProfileService {
       id: `offer_${index + 1}`,
       moment: {
         player,
-        image: `/api/placeholder/40/40`,
+        image: generateNBATopShotImageURL('profile-moment-1', 'profile_common', 40),
         series: `WNBA ${Math.random() > 0.5 ? 'METALLIC GOLD' : 'ROOKIE DEBUT'} ${new Date().getFullYear()}`
       },
       editionType: 'Edition Offer',
@@ -257,7 +266,7 @@ export class ProfileService {
     return players.map((player, index) => ({
       id: `moment_${index + 1}`,
       player,
-      image: `/api/placeholder/40/40`,
+              image: generateNBATopShotImageURL('profile-moment-2', 'profile_common', 40),
       series: series[Math.floor(Math.random() * series.length)],
       year: '2024-25',
       serial: Math.floor(Math.random() * 1000) + 1,

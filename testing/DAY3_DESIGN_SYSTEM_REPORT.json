@@ -1,0 +1,103 @@
+{
+  "timestamp": "2025-07-18T15:26:17.333Z",
+  "scores": {
+    "ctaVisibility": 100,
+    "touchTargets": 100,
+    "darkThemeAccessibility": 100,
+    "platformConsistency": 100
+  },
+  "overallScore": 100,
+  "results": {
+    "conversion": {
+      "ctaElements": 2,
+      "valuePropositions": 7,
+      "socialProof": 3,
+      "ctaVisibility": 100,
+      "ctaPlacement": "optimal",
+      "ctaSize": "compliant"
+    },
+    "mobileResponsiveness": {
+      "touchTargets": {
+        "total": 6,
+        "compliant": 6,
+        "percentage": 100
+      },
+      "responsiveLayouts": {
+        "mobile": true,
+        "tablet": true,
+        "desktop": true,
+        "percentage": 100
+      },
+      "thumbZone": {
+        "ctaInThumbZone": 2,
+        "totalCTAs": 2,
+        "percentage": 100
+      }
+    },
+    "darkTheme": {
+      "contrastRatios": {
+        "tested": 345,
+        "accessible": 345,
+        "percentage": 100
+      },
+      "imageVisibility": {
+        "tested": 15,
+        "visible": 15,
+        "percentage": 100
+      },
+      "visualHierarchy": {
+        "tested": 12,
+        "clear": 12,
+        "percentage": 100
+      }
+    },
+    "branding": {
+      "platformIcons": {
+        "nbaTopShot": true,
+        "paniniNFT": true,
+        "nflAllDay": true,
+        "percentage": 100
+      },
+      "colorCoding": {
+        "implemented": true,
+        "consistent": true
+      },
+      "visualConsistency": {
+        "platformCards": 5,
+        "consistent": 5,
+        "percentage": 100
+      }
+    }
+  },
+  "config": {
+    "platforms": [
+      "NBA TopShot",
+      "Panini NFT",
+      "NFL All Day"
+    ],
+    "touchTargets": {
+      "minimum": 44,
+      "recommended": 48
+    },
+    "conversionTargets": {
+      "ctaVisibility": 90,
+      "touchTargetCompliance": 95,
+      "darkThemeAccessibility": 90,
+      "platformConsistency": 100
+    }
+  },
+  "recommendations": {
+    "ctaOptimization": false,
+    "touchTargets": false,
+    "darkTheme": false,
+    "branding": false
+  },
+  "implementation": {
+    "platformBadge": true,
+    "touchTarget": true,
+    "darkThemeOptimizer": true,
+    "ctaEnhancement": true,
+    "dataAttributes": true,
+    "designSystemOptimization": true
+  }
+}

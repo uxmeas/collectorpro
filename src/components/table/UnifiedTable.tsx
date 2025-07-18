@@ -123,12 +123,12 @@ export function UnifiedTable<T>({
   // Get table rows
   const { rows } = table.getRowModel()
 
-  // Virtual scrolling for table mode
+  // Virtual scrolling for table mode with optimized performance for NBA TopShot images
   const rowVirtualizer = useVirtualizer({
     count: enableVirtualization ? rows.length : 0,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 52, // Estimated row height
-    overscan: 10,
+    estimateSize: () => 72, // 72px row height for NBA TopShot moments with images
+    overscan: 15, // Increased overscan for smoother image loading
   })
 
   // Handle view mode change
@@ -406,7 +406,7 @@ function TableView<T>({
         <tbody>
           {rowVirtualizer ? (
             <>
-              {virtualItems.map((virtualRow) => {
+              {virtualItems.map((virtualRow: any) => {
                 const row = rows[virtualRow.index]
                 return (
                   <tr

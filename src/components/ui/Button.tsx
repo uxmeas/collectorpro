@@ -22,11 +22,16 @@ const buttonVariants = cva(
         lg: "h-11 px-8 text-base",
         xl: "h-12 px-10 text-lg",
         icon: "h-10 w-10"
+      },
+      fullWidth: {
+        true: "w-full",
+        false: ""
       }
     },
     defaultVariants: {
       variant: "primary",
-      size: "default"
+      size: "default",
+      fullWidth: false
     }
   }
 )
@@ -38,6 +43,7 @@ export interface ButtonProps
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
   asChild?: boolean
+  fullWidth?: boolean
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -51,9 +57,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     children,
     disabled,
     asChild = false,
+    fullWidth,
     ...props 
   }, ref) => {
-    const buttonClasses = cn(buttonVariants({ variant, size, className }))
+    const buttonClasses = cn(buttonVariants({ variant, size, className, fullWidth }))
 
     if (asChild && React.isValidElement(children)) {
       return React.cloneElement(children, {

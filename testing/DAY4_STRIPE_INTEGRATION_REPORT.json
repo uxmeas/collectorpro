@@ -1,0 +1,181 @@
+{
+  "timestamp": "2025-07-18T15:35:29.730Z",
+  "scores": {
+    "stripeSetup": 100,
+    "paymentFlow": 0,
+    "errorHandling": 100,
+    "subscriptionManagement": 0
+  },
+  "results": {
+    "stripeSetup": {
+      "apiKeys": true,
+      "webhooks": true,
+      "products": true,
+      "prices": true
+    },
+    "paymentFlow": {
+      "checkoutSessions": 0,
+      "successfulPayments": 0,
+      "failedPayments": 0,
+      "trialActivations": 0
+    },
+    "errorHandling": {
+      "cardDeclines": 1,
+      "insufficientFunds": 1,
+      "expiredCards": 1,
+      "invalidCvc": 1,
+      "networkErrors": 1
+    },
+    "subscriptionManagement": {
+      "upgrades": 1,
+      "downgrades": 1,
+      "cancellations": 1,
+      "renewals": 1,
+      "billingPortal": false
+    }
+  },
+  "testResults": {
+    "stripeConnect": {
+      "setup": [
+        {
+          "apiKeys": true,
+          "webhooks": true,
+          "products": true,
+          "prices": true,
+          "timestamp": "2025-07-18T15:35:09.920Z"
+        }
+      ],
+      "configuration": [],
+      "webhooks": []
+    },
+    "paymentFlow": {
+      "checkout": [
+        {
+          "plan": "Starter Plan",
+          "planId": "starter",
+          "success": false,
+          "error": "No redirect to Stripe checkout",
+          "timestamp": "2025-07-18T15:35:13.641Z"
+        },
+        {
+          "plan": "Pro Plan",
+          "planId": "pro",
+          "success": false,
+          "error": "No redirect to Stripe checkout",
+          "timestamp": "2025-07-18T15:35:15.935Z"
+        },
+        {
+          "plan": "Enterprise Plan",
+          "planId": "enterprise",
+          "success": false,
+          "error": "No redirect to Stripe checkout",
+          "timestamp": "2025-07-18T15:35:18.161Z"
+        }
+      ],
+      "success": [],
+      "failure": []
+    },
+    "errorHandling": {
+      "scenarios": [
+        {
+          "scenario": "Card Decline",
+          "card": "4000000000000002",
+          "handled": true,
+          "timestamp": "2025-07-18T15:35:19.554Z"
+        },
+        {
+          "scenario": "Insufficient Funds",
+          "card": "4000000000009995",
+          "handled": true,
+          "timestamp": "2025-07-18T15:35:20.555Z"
+        },
+        {
+          "scenario": "Expired Card",
+          "card": "4000000000000069",
+          "handled": true,
+          "timestamp": "2025-07-18T15:35:21.558Z"
+        },
+        {
+          "scenario": "Invalid CVC",
+          "card": "4000000000000127",
+          "handled": true,
+          "timestamp": "2025-07-18T15:35:22.560Z"
+        }
+      ],
+      "recovery": [],
+      "userExperience": []
+    },
+    "subscriptionManagement": {
+      "lifecycle": [
+        {
+          "action": "upgrade",
+          "description": "Plan Upgrade",
+          "success": true,
+          "timestamp": "2025-07-18T15:35:24.563Z"
+        },
+        {
+          "action": "downgrade",
+          "description": "Plan Downgrade",
+          "success": true,
+          "timestamp": "2025-07-18T15:35:25.564Z"
+        },
+        {
+          "action": "cancel",
+          "description": "Subscription Cancellation",
+          "success": true,
+          "timestamp": "2025-07-18T15:35:26.565Z"
+        },
+        {
+          "action": "renew",
+          "description": "Subscription Renewal",
+          "success": true,
+          "timestamp": "2025-07-18T15:35:27.567Z"
+        }
+      ],
+      "billing": [],
+      "customerPortal": []
+    }
+  },
+  "config": {
+    "baseUrl": "http://localhost:3000",
+    "stripeTestCards": {
+      "success": "4242424242424242",
+      "decline": "4000000000000002",
+      "insufficientFunds": "4000000000009995",
+      "expired": "4000000000000069",
+      "incorrectCvc": "4000000000000127"
+    },
+    "subscriptionPlans": {
+      "starter": {
+        "id": "starter",
+        "price": 9.99,
+        "name": "Starter Plan"
+      },
+      "pro": {
+        "id": "pro",
+        "price": 19.99,
+        "name": "Pro Plan"
+      },
+      "enterprise": {
+        "id": "enterprise",
+        "price": 49.99,
+        "name": "Enterprise Plan"
+      }
+    },
+    "trialPeriod": 7,
+    "webhookEvents": [
+      "checkout.session.completed",
+      "customer.subscription.created",
+      "customer.subscription.updated",
+      "customer.subscription.deleted",
+      "invoice.payment_succeeded",
+      "invoice.payment_failed"
+    ]
+  },
+  "recommendations": {
+    "stripeSetup": false,
+    "paymentFlow": true,
+    "errorHandling": false,
+    "subscriptionManagement": true
+  }
+}

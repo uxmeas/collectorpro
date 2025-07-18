@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, ExternalLink, Heart, MoreHorizontal, Copy, St
 import { Button } from "@/components/ui/Button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from '@/lib/utils'
+import { MomentImageCompact } from "@/components/ui/MomentImage"
 
 // Price Cell Component
 export function PriceCell({ 
@@ -178,6 +179,18 @@ export function ImageCell({
     )
   }
 
+  if (!src) {
+    return fallback ? (
+      <div className={cn(
+        "rounded-lg flex items-center justify-center bg-gray-800",
+        sizeClasses[size],
+        className
+      )}>
+        {fallback}
+      </div>
+    ) : null
+  }
+
   return (
     <img
       src={src}
@@ -260,7 +273,7 @@ export function PlayerCell({
   return (
     <div className={cn("flex items-center gap-3", className)}>
       <ImageCell 
-        src={image} 
+        src={image || undefined} 
         alt={name} 
         size="md" 
         fallback={<span className="text-lg">{name.charAt(0)}</span>}
@@ -287,6 +300,8 @@ export function MomentCell({
   setName,
   serialNumber,
   momentImage,
+  rarity = 'Common',
+  editionName,
   className 
 }: {
   playerName: string
@@ -295,26 +310,23 @@ export function MomentCell({
   setName: string
   serialNumber: number
   momentImage?: string
+  rarity?: string
+  editionName?: string
   className?: string
 }) {
+  // Generate a consistent moment ID for the image component
+  const momentId = `${playerName.replace(/\s+/g, '')}_${serialNumber}`
+  
   return (
     <div className={cn("flex items-center gap-3", className)}>
       <div className="relative">
-        <ImageCell 
-          src={momentImage} 
-          alt={`${playerName} ${playType}`} 
-          size="lg"
-          fallback={<span className="text-2xl">🎬</span>}
+        <MomentImageCompact
+          momentId={momentId}
+          playerName={playerName}
+          rarity={rarity}
+          size={48}
+          editionName={editionName}
         />
-        <div className="absolute -bottom-1 -right-1">
-          <ImageCell 
-            src={playerImage} 
-            alt={playerName} 
-            size="xs"
-            fallback={<span className="text-xs">{playerName.charAt(0)}</span>}
-            className="border-2 border-[#0a0a0a]"
-          />
-        </div>
       </div>
       <div>
         <div className="font-medium text-white">{playerName}</div>

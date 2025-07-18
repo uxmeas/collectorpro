@@ -1,9 +1,11 @@
 import React from 'react'
 import { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import * as LucideIcons from 'lucide-react'
 
 export interface IconProps {
-  icon: LucideIcon
+  icon?: LucideIcon
+  name?: string
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   className?: string
   color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'current'
@@ -11,6 +13,7 @@ export interface IconProps {
 
 export function Icon({ 
   icon: IconComponent, 
+  name,
   size = 'md', 
   className,
   color = 'current'
@@ -32,8 +35,20 @@ export function Icon({
     current: 'text-current'
   }
 
+  // Support both icon prop and name prop
+  let Component = IconComponent
+  if (name && !IconComponent) {
+    const iconName = name.replace(/-([a-z])/g, (g) => g[1].toUpperCase()) as keyof typeof LucideIcons
+    Component = LucideIcons[iconName] as LucideIcon
+  }
+
+  if (!Component) {
+    console.warn(`Icon component not found for name: ${name}`)
+    return null
+  }
+
   return (
-    <IconComponent
+    <Component
       className={cn(
         sizeClasses[size],
         colorClasses[color],

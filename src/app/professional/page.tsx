@@ -170,8 +170,8 @@ export default function ProfessionalDashboard() {
       // Handle nested properties
       if (sortBy.includes('.')) {
         const keys = sortBy.split('.')
-        aValue = keys.reduce((obj, key) => obj?.[key], a)
-        bValue = keys.reduce((obj, key) => obj?.[key], b)
+        aValue = keys.reduce((obj: any, key) => obj?.[key], a)
+        bValue = keys.reduce((obj: any, key) => obj?.[key], b)
       }
 
       if (typeof aValue === 'string') {
@@ -264,17 +264,17 @@ export default function ProfessionalDashboard() {
     }
   }
 
-  const getUniqueValues = (field: string) => {
+  const getUniqueValues = (field: string): string[] => {
     return [...new Set(moments.map(m => {
       const keys = field.split('.')
-      return keys.reduce((obj, key) => obj?.[key], m)
-    }).filter(Boolean))].sort()
+      return keys.reduce((obj: any, key) => obj?.[key], m)
+    }).filter(Boolean))].sort() as string[]
   }
 
   const toggleFilter = (filterType: string, value: string) => {
     setFilters(prev => ({
       ...prev,
-      [filterType]: prev[filterType as keyof typeof prev].includes(value)
+      [filterType]: (prev[filterType as keyof typeof prev] as string[])?.includes(value)
         ? (prev[filterType as keyof typeof prev] as string[]).filter((v: string) => v !== value)
         : [...(prev[filterType as keyof typeof prev] as string[]), value]
     }))
@@ -542,7 +542,7 @@ export default function ProfessionalDashboard() {
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-2">All Players</label>
                 <div className="max-h-32 overflow-y-auto space-y-1">
-                  {getUniqueValues('playerName').map(player => (
+                  {getUniqueValues('playerName').map((player: string) => (
                     <label key={player} className="flex items-center text-xs">
                       <input
                         type="checkbox"
@@ -560,7 +560,7 @@ export default function ProfessionalDashboard() {
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-2">All Sets</label>
                 <div className="max-h-32 overflow-y-auto space-y-1">
-                  {getUniqueValues('set').map(set => (
+                  {getUniqueValues('set').map((set: string) => (
                     <label key={set} className="flex items-center text-xs">
                       <input
                         type="checkbox"
@@ -578,7 +578,7 @@ export default function ProfessionalDashboard() {
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-2">All Teams</label>
                 <div className="max-h-32 overflow-y-auto space-y-1">
-                  {getUniqueValues('teamName').map(team => (
+                  {getUniqueValues('teamName').map((team: string) => (
                     <label key={team} className="flex items-center text-xs">
                       <input
                         type="checkbox"
@@ -596,7 +596,7 @@ export default function ProfessionalDashboard() {
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-2">All Rarities</label>
                 <div className="space-y-1">
-                  {getUniqueValues('rarity').map(rarity => (
+                  {getUniqueValues('rarity').map((rarity: string) => (
                     <label key={rarity} className="flex items-center text-xs">
                       <input
                         type="checkbox"

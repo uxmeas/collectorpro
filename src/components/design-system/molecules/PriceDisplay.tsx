@@ -5,7 +5,8 @@ import { Icon } from '../atoms/Icon'
 import { cn } from '@/lib/utils'
 
 export interface PriceDisplayProps {
-  price: number
+  price?: number
+  amount?: number
   previousPrice?: number
   currency?: string
   showTrend?: boolean
@@ -15,12 +16,16 @@ export interface PriceDisplayProps {
 
 export function PriceDisplay({
   price,
+  amount,
   previousPrice,
   currency = 'USD',
   showTrend = true,
   size = 'md',
   className
 }: PriceDisplayProps) {
+  // Support both price and amount props
+  const displayPrice = price ?? amount ?? 0
+  
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -30,7 +35,7 @@ export function PriceDisplay({
     }).format(amount)
   }
 
-  const trend = previousPrice ? price - previousPrice : 0
+  const trend = previousPrice ? displayPrice - previousPrice : 0
   const trendPercentage = previousPrice ? ((trend / previousPrice) * 100) : 0
   const isPositive = trend > 0
   const isNegative = trend < 0
@@ -54,7 +59,7 @@ export function PriceDisplay({
         weight="semibold"
         variant="primary"
       >
-        {formatPrice(price)}
+        {formatPrice(displayPrice)}
       </Text>
 
       {showTrend && previousPrice && (

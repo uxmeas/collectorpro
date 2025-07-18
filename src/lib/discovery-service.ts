@@ -298,7 +298,7 @@ class DiscoveryService {
 
     const playTypes = ['Dunk', 'Three Pointer', 'Assist', 'Block', 'Steal', 'Layup', 'Crossover', 'Rebound']
     const rarityTiers = ['Common', 'Rare', 'Legendary', 'Ultimate']
-    const series = ['Series 1', 'Series 2', 'Series 3', 'Series 4']
+    const seriesNames = ['Series 1', 'Series 2', 'Series 3', 'Series 4']
     const setNames = ['Base Set', 'Playoffs', 'Rookie Debut', 'Rising Stars', 'Champion', 'Finals']
 
     const moments: DiscoveryMoment[] = []
@@ -307,7 +307,7 @@ class DiscoveryService {
       const player = players[Math.floor(Math.random() * players.length)]
       const playType = playTypes[Math.floor(Math.random() * playTypes.length)]
       const rarityTier = rarityTiers[Math.floor(Math.random() * rarityTiers.length)]
-      const series = series[Math.floor(Math.random() * series.length)]
+      const seriesName = seriesNames[Math.floor(Math.random() * seriesNames.length)]
       const setName = setNames[Math.floor(Math.random() * setNames.length)]
 
       const basePrice = 50 + Math.random() * 2000
@@ -354,7 +354,7 @@ class DiscoveryService {
         teamLogo: player.logo,
         playType,
         setName,
-        series,
+        series: seriesName,
         rarityTier,
         currentPrice: basePrice + priceChange24h,
         priceChange24h,

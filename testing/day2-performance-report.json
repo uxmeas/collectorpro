@@ -1,0 +1,91 @@
+{
+  "apiPerformance": {
+    "/api/flow/marketplace": {
+      "avgResponseTime": 32.8,
+      "maxResponseTime": 58,
+      "minResponseTime": 24,
+      "successRate": 100
+    },
+    "/api/flow/portfolio": {
+      "avgResponseTime": 25.2,
+      "maxResponseTime": 29,
+      "minResponseTime": 23,
+      "successRate": 0
+    },
+    "/api/flow/collections": {
+      "avgResponseTime": 58.6,
+      "maxResponseTime": 152,
+      "minResponseTime": 28,
+      "successRate": 100
+    },
+    "/api/flow/packs": {
+      "avgResponseTime": 28.2,
+      "maxResponseTime": 31,
+      "minResponseTime": 23,
+      "successRate": 100
+    },
+    "/api/flow/transactions": {
+      "avgResponseTime": 66.4,
+      "maxResponseTime": 116,
+      "minResponseTime": 33,
+      "successRate": 100
+    }
+  },
+  "imageLoading": {
+    "48": {
+      "avgLoadTime": 134.8,
+      "maxLoadTime": 285,
+      "minLoadTime": 51,
+      "successRate": 100
+    },
+    "161": {
+      "avgLoadTime": 77,
+      "maxLoadTime": 119,
+      "minLoadTime": 54,
+      "successRate": 100
+    },
+    "300": {
+      "avgLoadTime": 82.2,
+      "maxLoadTime": 166,
+      "minLoadTime": 54,
+      "successRate": 100
+    },
+    "500": {
+      "avgLoadTime": 136.6,
+      "maxLoadTime": 179,
+      "minLoadTime": 84,
+      "successRate": 100
+    }
+  },
+  "memoryUsage": {
+    "avgUsed": 69.36381128835612,
+    "maxUsed": 98.39680606080557,
+    "minUsed": 42.15286970012216,
+    "avgTotal": 209,
+    "memoryLeak": 49.68449290326789
+  },
+  "edgeCases": {
+    "Malformed JSON": {
+      "responseTime": 78,
+      "status": 400,
+      "handled": true
+    },
+    "Large Payload": {
+      "responseTime": 25,
+      "status": 200,
+      "handled": true
+    },
+    "Invalid Endpoint": {
+      "responseTime": 42,
+      "status": 404,
+      "handled": true
+    }
+  },
+  "summary": {
+    "totalTests": 12,
+    "passedTests": 12,
+    "overallSuccess": true,
+    "averageAPITime": 42.239999999999995,
+    "averageImageTime": 107.65
+  }
+}

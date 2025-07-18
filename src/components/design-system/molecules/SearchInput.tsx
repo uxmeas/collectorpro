@@ -43,7 +43,7 @@ export function SearchInput({
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
-        size={size}
+        size={size === 'default' ? 'md' : size}
         disabled={disabled}
         className={cn(
           'pl-10',

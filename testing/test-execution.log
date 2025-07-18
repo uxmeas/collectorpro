@@ -1,0 +1,40 @@
+[0;34m[2025-07-18 00:56:04][0m Starting CollectorPRO Testing Execution
+[0;34m[2025-07-18 00:56:04][0m ======================================
+[0;34m[2025-07-18 00:56:04][0m Checking if CollectorPRO server is running...
+[0;32m✅ Server is running at http://localhost:3000[0m
+[0;34m[2025-07-18 00:56:04][0m === Phase 1: Core Functionality Testing ===
+[0;34m[2025-07-18 00:56:04][0m Running test: NBA TopShot API Connection
+[0;32m✅ PASSED: NBA TopShot API Connection[0m
+[0;34m[2025-07-18 00:56:04][0m Testing performance: Search Performance
+[0;32m✅ PASSED: Search Performance (39ms < 200ms)[0m
+[0;34m[2025-07-18 00:56:04][0m Testing performance: Filter Performance
+[0;32m✅ PASSED: Filter Performance (41ms < 200ms)[0m
+[0;34m[2025-07-18 00:56:04][0m Testing performance: Image Loading
+[0;32m✅ PASSED: Image Loading (819ms < 2000ms)[0m
+[0;34m[2025-07-18 00:56:05][0m Running test: Pack Activity API
+[0;32m✅ PASSED: Pack Activity API[0m
+[0;34m[2025-07-18 00:56:05][0m Running test: Collections API
+[0;32m✅ PASSED: Collections API[0m
+[0;34m[2025-07-18 00:56:05][0m Running test: Authentication Enforcement
+[0;32m✅ PASSED: Authentication Enforcement[0m
+[0;34m[2025-07-18 00:56:05][0m === Phase 2: User Flow Testing ===
+[0;34m[2025-07-18 00:56:05][0m Running test: Landing Page Load
+[0;32m✅ PASSED: Landing Page Load[0m
+[0;34m[2025-07-18 00:56:05][0m Running test: Dashboard Page Load
+[0;32m✅ PASSED: Dashboard Page Load[0m
+[0;34m[2025-07-18 00:56:07][0m Running test: Marketplace Page Load
+[0;32m✅ PASSED: Marketplace Page Load[0m
+[0;34m[2025-07-18 00:56:07][0m Running test: Activity Page Load
+[0;32m✅ PASSED: Activity Page Load[0m
+[0;34m[2025-07-18 00:56:07][0m Running test: Connect Page Load
+[0;32m✅ PASSED: Connect Page Load[0m
+[0;34m[2025-07-18 00:56:07][0m === Phase 3: Performance Testing ===
+[0;34m[2025-07-18 00:56:07][0m Testing concurrent request handling...
+[0;32m✅ PASSED: Concurrent Request Handling (10/10)[0m
+[0;34m[2025-07-18 00:56:07][0m Testing response time consistency...
+[0;31m❌ FAILED: Response Time Consistency (avg: 42ms, times: 35 35 31 33 80)[0m
+[0;34m[2025-07-18 00:56:08][0m === Phase 4: Edge Case Testing ===
+[0;34m[2025-07-18 00:56:08][0m Running test: Invalid Endpoint Handling
+[0;32m✅ PASSED: Invalid Endpoint Handling[0m
+[0;34m[2025-07-18 00:56:08][0m Running test: Malformed JSON Handling
+[0;31m❌ FAILED: Malformed JSON Handling[0m
