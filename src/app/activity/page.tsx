@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/Button"
-import { Input } from "@/components/ui/Input"
+import Input from "@/components/ui/Input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
@@ -25,7 +25,9 @@ import {
   DollarSign,
   Users,
   Star,
-  Zap
+  Zap,
+  RefreshCw,
+  Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -34,7 +36,7 @@ type ActivityEvent = 'Sale' | 'Mint' | 'Transfer' | 'Pack Opening' | 'Listing' |
 
 interface NBATopShotActivity {
   id: string
-  event: ActivityEvent
+  type: ActivityEvent
   momentId: string
   playerName: string
   playDescription: string
@@ -51,64 +53,25 @@ interface NBATopShotActivity {
   to: string
   timestamp: Date
   transactionHash: string
-  thumbnail: string
-  marketplaceIcon?: string
+  blockHeight?: number
+  thumbnail?: string
+  metadata?: {
+    teamName?: string
+    gameDate?: string
+    playCategory?: string
+    videoUrl?: string
+  }
 }
 
-// Mock NBA Top Shot activity data
-const generateMockActivity = (): NBATopShotActivity[] => {
-  const players = [
-    'LeBron James', 'Stephen Curry', 'Kevin Durant', 'Giannis Antetokounmpo', 
-    'Luka Dončić', 'Jayson Tatum', 'Joel Embiid', 'Nikola Jokić',
-    'Ja Morant', 'Zion Williamson', 'Anthony Davis', 'Kawhi Leonard'
-  ]
-  
-  const plays = [
-    'Poster Dunk', 'Crossover', 'Three-Pointer', 'Buzzer Beater', 
-    'Block', 'Steal', 'Assist', 'Fadeaway', 'Alley-Oop', 'Stepback'
-  ]
-  
-  const sets = [
-    'Base Set', 'Rare', 'Legendary', 'Championship', 'Playoffs', 
-    'All-Star', 'Rookie Debut', 'Rising Stars', 'Metallic Gold LE'
-  ]
-  
-  const events: ActivityEvent[] = ['Sale', 'Mint', 'Transfer', 'Pack Opening', 'Listing']
-  const rarities: ('Common' | 'Rare' | 'Legendary' | 'Ultimate')[] = ['Common', 'Rare', 'Legendary', 'Ultimate']
-  
-  const wallets = [
-    'c5bb3d', 'pinkman_egg', 'collector99', 'nba_whale', 'topshot_pro',
-    'moment_king', 'flow_master', 'hoop_dreams', 'nft_legend', 'crypto_baller'
-  ]
-  
-  return Array.from({ length: 200 }, (_, i) => {
-    const event = events[Math.floor(Math.random() * events.length)]
-    const rarity = rarities[Math.floor(Math.random() * rarities.length)]
-    const hasPrice = event === 'Sale' || event === 'Listing'
-    
-    return {
-      id: `activity-${i}`,
-      event,
-      momentId: `moment-${i}`,
-      playerName: players[Math.floor(Math.random() * players.length)],
-      playDescription: plays[Math.floor(Math.random() * plays.length)],
-      setName: sets[Math.floor(Math.random() * sets.length)],
-      series: `Series ${Math.floor(Math.random() * 4) + 1}`,
-      rarity,
-      circulation: Math.floor(Math.random() * 50000) + 100,
-      serialNumber: Math.floor(Math.random() * 10000) + 1,
-      price: hasPrice ? {
-        usd: Math.floor(Math.random() * 10000) + 10,
-        flow: Math.floor(Math.random() * 1000) + 1
-      } : undefined,
-      from: wallets[Math.floor(Math.random() * wallets.length)],
-      to: wallets[Math.floor(Math.random() * wallets.length)],
-      timestamp: new Date(Date.now() - Math.floor(Math.random() * 86400000 * 7)), // Last 7 days
-      transactionHash: `0x${Math.random().toString(16).substring(2, 18)}`,
-      thumbnail: `/api/placeholder/60/60`,
-      marketplaceIcon: event === 'Sale' ? '/topshot-logo.png' : undefined
-    }
-  }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+interface ActivityMetrics {
+  totalTransactions: number
+  totalVolume: { usd: number; flow: number }
+  averagePrice: { usd: number; flow: number }
+  uniqueTraders: number
+  topPlayer: string
+  topSet: string
+  priceChange24h: number
+  volumeChange24h: number
 }
 
 // Utility functions
@@ -175,7 +138,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
 }
 
 export default function ActivityPage() {
-  const [activities] = useState<NBATopShotActivity[]>(generateMockActivity())
+  const [activities, setActivities] = useState<NBATopShotActivity[]>([])
+  const [metrics, setMetrics] = useState<ActivityMetrics | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  
   const [filters, setFilters] = useState({
     status: [] as string[],
     events: [] as string[],
@@ -186,11 +154,92 @@ export default function ActivityPage() {
   })
   const [searchTerm, setSearchTerm] = useState('')
 
+  // Fetch real NBA TopShot activity data
+  const fetchActivityData = async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true)
+      setError(null)
+
+      const params = new URLSearchParams()
+      
+      // Add filters to params
+      if (filters.status.length > 0) {
+        params.append('eventTypes', filters.status.join(','))
+      }
+      if (filters.priceRange.min) {
+        params.append('minPrice', filters.priceRange.min)
+      }
+      if (filters.priceRange.max) {
+        params.append('maxPrice', filters.priceRange.max)
+      }
+      if (filters.sets.length > 0) {
+        params.append('sets', filters.sets.join(','))
+      }
+      
+      params.append('limit', '100')
+      params.append('offset', '0')
+
+      console.log('🔄 Fetching real NBA TopShot activity data...')
+      
+      const response = await fetch(`/api/activity?${params.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        // Transform API data to component format
+        const transformedActivities = data.data.transactions.map((tx: any) => ({
+          ...tx,
+          event: tx.type, // Map 'type' to 'event' for backwards compatibility
+          timestamp: new Date(tx.timestamp)
+        }))
+        
+        setActivities(transformedActivities)
+        setMetrics(data.data.metrics)
+        setLastUpdate(new Date())
+        
+        console.log(`✅ Loaded ${transformedActivities.length} real NBA TopShot transactions`)
+      } else {
+        throw new Error(data.message || 'Failed to fetch activity data')
+      }
+    } catch (err) {
+      console.error('❌ Error fetching activity data:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load activity data')
+      
+      // Fallback to some basic data if real API fails
+      setActivities([])
+      setMetrics(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Auto-refresh data every 30 seconds
+  useEffect(() => {
+    fetchActivityData()
+    
+    const interval = setInterval(() => {
+      fetchActivityData(false) // Don't show loading spinner for auto-refresh
+    }, 30000) // 30 seconds
+    
+    return () => clearInterval(interval)
+  }, []) // Only run on mount
+
+  // Refetch when filters change
+  useEffect(() => {
+    if (!loading) {
+      fetchActivityData()
+    }
+  }, [filters])
+
   // Filter the activities based on current filters
   const filteredActivities = useMemo(() => {
     return activities.filter(activity => {
-      // Status filter
-      if (filters.status.length > 0 && !filters.status.includes(activity.event)) {
+      // Status filter (already applied in API call, but filter locally too)
+      if (filters.status.length > 0 && !filters.status.includes(activity.type)) {
         return false
       }
       
@@ -200,14 +249,7 @@ export default function ActivityPage() {
         return false
       }
       
-      // Price range filter
-      if (activity.price && filters.priceRange.min && activity.price.usd < parseInt(filters.priceRange.min)) {
-        return false
-      }
-      if (activity.price && filters.priceRange.max && activity.price.usd > parseInt(filters.priceRange.max)) {
-        return false
-      }
-      
+      // Additional local filtering can be added here
       return true
     })
   }, [activities, filters, searchTerm])
@@ -245,20 +287,25 @@ export default function ActivityPage() {
         {/* Left Sidebar */}
         <div className="w-80 bg-[#1a1a1a] border-r border-gray-800 min-h-screen p-6">
           <div className="mb-6">
-            <h2 className="text-xl font-bold mb-2">NBA Top Shot Activity</h2>
+            <h2 className="text-xl font-bold mb-2">NBA TopShot Activity</h2>
             <p className="text-gray-400 text-sm">Real-time Flow blockchain transactions</p>
+            {lastUpdate && (
+              <p className="text-xs text-gray-500 mt-1">
+                Last updated: {lastUpdate.toLocaleTimeString()}
+              </p>
+            )}
           </div>
 
           <ScrollArea className="h-[calc(100vh-140px)]">
             {/* Status Filters */}
-            <FilterSection title="Status">
+            <FilterSection title="Transaction Type">
               <div className="space-y-3">
                 {['Sale', 'Mint', 'Transfer', 'Pack Opening'].map(status => (
                   <div key={status} className="flex items-center space-x-2">
                     <Checkbox
                       id={status}
                       checked={filters.status.includes(status)}
-                      onChange={(e) => 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                         handleFilterChange('status', status, e.target.checked)
                       }
                     />
@@ -271,43 +318,23 @@ export default function ActivityPage() {
               </div>
             </FilterSection>
 
-            {/* Event Filters */}
-            <FilterSection title="Event">
-              <div className="space-y-3">
-                {['Listing', 'Delisting', 'Item Offer', 'Collection Offer'].map(event => (
-                  <div key={event} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={event}
-                      checked={filters.events.includes(event)}
-                      onChange={(e) => 
-                        handleFilterChange('events', event, e.target.checked)
-                      }
-                    />
-                    <Label htmlFor={event} className="text-sm font-normal cursor-pointer">
-                      {event}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </FilterSection>
-
             {/* Price Range */}
-            <FilterSection title="Price">
+            <FilterSection title="Price Range">
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Min"
+                    placeholder="Min USD"
                     value={filters.priceRange.min}
-                    onChange={(e) => setFilters(prev => ({
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters(prev => ({
                       ...prev,
                       priceRange: { ...prev.priceRange, min: e.target.value }
                     }))}
                     className="bg-gray-800 border-gray-700"
                   />
                   <Input
-                    placeholder="Max"
+                    placeholder="Max USD"
                     value={filters.priceRange.max}
-                    onChange={(e) => setFilters(prev => ({
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters(prev => ({
                       ...prev,
                       priceRange: { ...prev.priceRange, max: e.target.value }
                     }))}
@@ -318,55 +345,15 @@ export default function ActivityPage() {
               </div>
             </FilterSection>
 
-            {/* Marketplaces */}
-            <FilterSection title="Marketplaces">
+            {/* NBA TopShot Sets */}
+            <FilterSection title="NBA TopShot Sets">
               <div className="space-y-3">
-                {['NBA Top Shot', 'Flowty', 'Matrix World'].map(marketplace => (
-                  <div key={marketplace} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={marketplace}
-                      checked={filters.marketplaces.includes(marketplace)}
-                      onChange={(e) => 
-                        handleFilterChange('marketplaces', marketplace, e.target.checked)
-                      }
-                    />
-                    <Label htmlFor={marketplace} className="text-sm font-normal cursor-pointer">
-                      {marketplace}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </FilterSection>
-
-            {/* Leagues */}
-            <FilterSection title="Leagues">
-              <div className="space-y-3">
-                {['NBA', 'WNBA'].map(league => (
-                  <div key={league} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={league}
-                      checked={filters.leagues.includes(league)}
-                      onChange={(e) => 
-                        handleFilterChange('leagues', league, e.target.checked)
-                      }
-                    />
-                    <Label htmlFor={league} className="text-sm font-normal cursor-pointer">
-                      {league}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </FilterSection>
-
-            {/* Sets */}
-            <FilterSection title="NBA Top Shot Sets">
-              <div className="space-y-3">
-                {['Base Set', 'Rare', 'Legendary', 'Championship', 'Playoffs', 'All-Star'].map(set => (
+                {['Base Set', 'Rare', 'Legendary', 'Championship', 'Playoffs', 'All-Star', 'Rising Stars'].map(set => (
                   <div key={set} className="flex items-center space-x-2">
                     <Checkbox
                       id={set}
                       checked={filters.sets.includes(set)}
-                      onChange={(e) => 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                         handleFilterChange('sets', set, e.target.checked)
                       }
                     />
@@ -386,22 +373,53 @@ export default function ActivityPage() {
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h1 className="text-2xl font-bold mb-1">Activity Feed</h1>
-                <p className="text-gray-400">Live NBA Top Shot transactions on Flow blockchain</p>
+                <h1 className="text-2xl font-bold mb-1 flex items-center gap-3">
+                  Live NBA TopShot Activity
+                  {loading && <Loader2 className="h-5 w-5 animate-spin text-blue-400" />}
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-green-400 font-medium">LIVE</span>
+                  </div>
+                </h1>
+                <p className="text-gray-400">Real-time Flow blockchain transactions • Auto-refreshes every 30s</p>
               </div>
               <div className="flex items-center gap-3">
                 <Input
                   placeholder="Search players or plays..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                   className="w-64 bg-gray-800 border-gray-700"
                 />
-                <Button variant="outline" size="sm" className="border-gray-700">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => fetchActivityData()}
+                  disabled={loading}
+                  className="border-gray-700"
+                >
+                  <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+                  Refresh
                 </Button>
               </div>
             </div>
+
+            {/* Error State */}
+            {error && (
+              <div className="mb-4 p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <X className="h-4 w-4 text-red-400" />
+                  <span className="text-red-400 text-sm">Error loading activity data: {error}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => fetchActivityData()}
+                    className="ml-auto text-red-400 hover:text-red-300"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Active Filters */}
             {activeFilterCount > 0 && (
@@ -443,95 +461,118 @@ export default function ActivityPage() {
               {/* Table Header */}
               <div className="grid grid-cols-12 gap-4 p-4 border-b border-gray-800 text-sm font-medium text-gray-400">
                 <div className="col-span-2">EVENT</div>
-                <div className="col-span-3">ITEM</div>
+                <div className="col-span-3">MOMENT</div>
                 <div className="col-span-2">PRICE</div>
                 <div className="col-span-1">RARITY</div>
-                <div className="col-span-1">QTY</div>
+                <div className="col-span-1">SERIAL</div>
                 <div className="col-span-1">FROM</div>
                 <div className="col-span-1">TO</div>
                 <div className="col-span-1">TIME</div>
               </div>
 
-              {/* Activity Rows */}
-              <ScrollArea className="h-[600px]">
-                {filteredActivities.map((activity) => (
-                  <div 
-                    key={activity.id} 
-                    className="grid grid-cols-12 gap-4 p-4 border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
-                  >
-                    {/* Event */}
-                    <div className="col-span-2 flex items-center gap-2">
-                      <div className={cn(
-                        "p-2 rounded-lg",
-                        activity.event === 'Sale' ? "bg-green-600/20 text-green-400" :
-                        activity.event === 'Mint' ? "bg-blue-600/20 text-blue-400" :
-                        activity.event === 'Transfer' ? "bg-purple-600/20 text-purple-400" :
-                        "bg-gray-600/20 text-gray-400"
-                      )}>
-                        {getEventIcon(activity.event)}
-                      </div>
-                      <span className="text-sm font-medium">{activity.event}</span>
-                    </div>
-
-                    {/* Item */}
-                    <div className="col-span-3 flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={activity.thumbnail} alt={activity.playerName} />
-                        <AvatarFallback>{activity.playerName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium text-sm">{activity.playerName}</div>
-                        <div className="text-xs text-gray-400">{activity.playDescription}</div>
-                        <div className="text-xs text-gray-500">{activity.setName} • #{activity.serialNumber}</div>
-                      </div>
-                    </div>
-
-                    {/* Price */}
-                    <div className="col-span-2 flex items-center">
-                      {activity.price ? (
-                        <div>
-                          <div className="font-medium text-sm">{formatPrice(activity.price).usd}</div>
-                          <div className="text-xs text-gray-400">{formatPrice(activity.price).flow}</div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-500 text-sm">—</span>
-                      )}
-                    </div>
-
-                    {/* Rarity */}
-                    <div className="col-span-1 flex items-center">
-                      <div className="flex items-center gap-2">
-                        <div className={cn("w-2 h-2 rounded-full", getRarityColor(activity.rarity))} />
-                        <span className="text-sm">{activity.rarity}</span>
-                      </div>
-                    </div>
-
-                    {/* Quantity */}
-                    <div className="col-span-1 flex items-center">
-                      <span className="text-sm">1</span>
-                    </div>
-
-                    {/* From */}
-                    <div className="col-span-1 flex items-center">
-                      <span className="text-sm font-mono text-blue-400 cursor-pointer hover:underline">
-                        {activity.from}
-                      </span>
-                    </div>
-
-                    {/* To */}
-                    <div className="col-span-1 flex items-center">
-                      <span className="text-sm font-mono text-blue-400 cursor-pointer hover:underline">
-                        {activity.to}
-                      </span>
-                    </div>
-
-                    {/* Time */}
-                    <div className="col-span-1 flex items-center">
-                      <span className="text-sm text-gray-400">{formatRelativeTime(activity.timestamp)}</span>
-                    </div>
+              {/* Loading State */}
+              {loading && activities.length === 0 && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+                    <span className="text-gray-400">Loading real NBA TopShot transactions...</span>
                   </div>
-                ))}
-              </ScrollArea>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!loading && activities.length === 0 && !error && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <Activity className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-300 mb-2">No transactions found</h3>
+                    <p className="text-gray-400">Try adjusting your filters or check back later.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Activity Rows */}
+              {filteredActivities.length > 0 && (
+                <ScrollArea className="h-[600px]">
+                  {filteredActivities.map((activity, index) => (
+                    <div 
+                      key={`${activity.id}-${index}`}
+                      className="grid grid-cols-12 gap-4 p-4 border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
+                    >
+                      {/* Event */}
+                      <div className="col-span-2 flex items-center gap-2">
+                        <div className={cn(
+                          "p-2 rounded-lg",
+                          activity.type === 'Sale' ? "bg-green-600/20 text-green-400" :
+                          activity.type === 'Mint' ? "bg-blue-600/20 text-blue-400" :
+                          activity.type === 'Transfer' ? "bg-purple-600/20 text-purple-400" :
+                          "bg-gray-600/20 text-gray-400"
+                        )}>
+                          {getEventIcon(activity.type)}
+                        </div>
+                        <span className="text-sm font-medium">{activity.type}</span>
+                      </div>
+
+                      {/* Moment */}
+                      <div className="col-span-3 flex items-center gap-3">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={activity.thumbnail} alt={activity.playerName} />
+                          <AvatarFallback>{activity.playerName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium text-sm">{activity.playerName}</div>
+                          <div className="text-xs text-gray-400">{activity.playDescription}</div>
+                          <div className="text-xs text-gray-500">{activity.setName}</div>
+                        </div>
+                      </div>
+
+                      {/* Price */}
+                      <div className="col-span-2 flex items-center">
+                        {activity.price ? (
+                          <div>
+                            <div className="font-medium text-sm">{formatPrice(activity.price).usd}</div>
+                            <div className="text-xs text-gray-400">{formatPrice(activity.price).flow}</div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-sm">—</span>
+                        )}
+                      </div>
+
+                      {/* Rarity */}
+                      <div className="col-span-1 flex items-center">
+                        <div className="flex items-center gap-2">
+                          <div className={cn("w-2 h-2 rounded-full", getRarityColor(activity.rarity))} />
+                          <span className="text-xs">{activity.rarity}</span>
+                        </div>
+                      </div>
+
+                      {/* Serial Number */}
+                      <div className="col-span-1 flex items-center">
+                        <span className="text-sm">#{activity.serialNumber}</span>
+                      </div>
+
+                      {/* From */}
+                      <div className="col-span-1 flex items-center">
+                        <span className="text-xs font-mono text-blue-400 cursor-pointer hover:underline">
+                          {activity.from.length > 8 ? `${activity.from.substring(0, 6)}...` : activity.from}
+                        </span>
+                      </div>
+
+                      {/* To */}
+                      <div className="col-span-1 flex items-center">
+                        <span className="text-xs font-mono text-blue-400 cursor-pointer hover:underline">
+                          {activity.to.length > 8 ? `${activity.to.substring(0, 6)}...` : activity.to}
+                        </span>
+                      </div>
+
+                      {/* Time */}
+                      <div className="col-span-1 flex items-center">
+                        <span className="text-sm text-gray-400">{formatRelativeTime(activity.timestamp)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </ScrollArea>
+              )}
             </CardContent>
           </Card>
 
@@ -545,7 +586,9 @@ export default function ActivityPage() {
                   </div>
                   <div>
                     <div className="text-sm text-gray-400">Total Sales</div>
-                    <div className="text-lg font-bold">{filteredActivities.filter(a => a.event === 'Sale').length}</div>
+                    <div className="text-lg font-bold">
+                      {metrics?.totalTransactions || filteredActivities.filter(a => a.type === 'Sale').length}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -559,7 +602,9 @@ export default function ActivityPage() {
                   </div>
                   <div>
                     <div className="text-sm text-gray-400">Volume (24h)</div>
-                    <div className="text-lg font-bold">$2.1M</div>
+                    <div className="text-lg font-bold">
+                      {metrics?.totalVolume ? formatPrice(metrics.totalVolume).usd : '—'}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -572,8 +617,10 @@ export default function ActivityPage() {
                     <Users className="h-5 w-5 text-purple-400" />
                   </div>
                   <div>
-                    <div className="text-sm text-gray-400">Active Traders</div>
-                    <div className="text-lg font-bold">1,247</div>
+                    <div className="text-sm text-gray-400">Unique Traders</div>
+                    <div className="text-lg font-bold">
+                      {metrics?.uniqueTraders || '—'}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -587,7 +634,9 @@ export default function ActivityPage() {
                   </div>
                   <div>
                     <div className="text-sm text-gray-400">Avg Sale Price</div>
-                    <div className="text-lg font-bold">$127</div>
+                    <div className="text-lg font-bold">
+                      {metrics?.averagePrice ? formatPrice(metrics.averagePrice).usd : '—'}
+                    </div>
                   </div>
                 </div>
               </CardContent>
