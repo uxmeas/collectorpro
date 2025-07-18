@@ -1,529 +1,455 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  BarChart3, 
+  Target, 
+  Activity,
+  Eye,
+  Star,
+  Filter,
+  Download,
+  Search,
+  RefreshCw,
+  ArrowUpRight,
+  ArrowDownRight,
+  MoreHorizontal,
+  Calendar,
+  Zap
+} from 'lucide-react'
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
-interface DapperMoment {
-  id: string;
-  playId: string;
-  playerName: string;
-  teamName: string;
-  playCategory: string;
-  playType: string;
-  rarity: string;
-  serialNumber: number;
-  totalCirculation: number;
-  acquisitionPrice?: number;
-  currentValue?: number;
-  acquisitionDate?: string;
-  momentURL: string;
-  imageURL: string;
-}
-
-interface Portfolio {
-  totalValue: number;
-  totalMoments: number;
-  totalAcquisitionCost: number;
-  totalProfit: number;
-  profitPercentage: number;
-}
-
-export default function DashboardPage() {
-  const router = useRouter();
-  const [userEmail, setUserEmail] = useState("");
-  const [dapperWallet, setDapperWallet] = useState("");
-  const [dapperEmail, setDapperEmail] = useState("");
-  const [dapperPassword, setDapperPassword] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [connecting, setConnecting] = useState(false);
-  const [moments, setMoments] = useState<DapperMoment[]>([]);
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [error, setError] = useState("");
-  const [lastUpdated, setLastUpdated] = useState("");
+// Premium Performance Metrics Hook (Koyfin-inspired)
+const usePortfolioMetrics = (walletAddress: string) => {
+  const [metrics, setMetrics] = useState({
+    totalValue: 0,
+    totalProfit: 0,
+    roi: 0,
+    topPerformer: null,
+    recentActivity: [],
+    loading: true
+  })
 
   useEffect(() => {
-    async function loadDashboard() {
+    const fetchMetrics = async () => {
       try {
-        // Check authentication
-        const authRes = await fetch("/api/auth/me", { credentials: "include" });
-        if (!authRes.ok) {
-          router.push("/login");
-          return;
-        }
-        const authData = await authRes.json();
-        setUserEmail(authData.email);
-
-        // Check for OAuth callback
-        const urlParams = new URLSearchParams(window.location.search);
-        const oauthStatus = urlParams.get('oauth');
-        const oauthWallet = urlParams.get('wallet');
+        const response = await fetch(`/api/flow/comprehensive-portfolio?address=${walletAddress}`)
+        const data = await response.json()
         
-        if (oauthStatus === 'success' && oauthWallet) {
-          setDapperWallet(oauthWallet);
-          await fetchDapperData(oauthWallet);
-          // Clear URL parameters
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } else {
-          // Get wallet address from profile
-          const walletRes = await fetch("/api/profile/wallet", { credentials: "include" });
-          if (walletRes.ok) {
-            const walletData = await walletRes.json();
-            setDapperWallet(walletData.dapperWallet || "");
-            
-            // Don't automatically fetch data - let user connect manually with credentials
-            // This prevents the "No moments found" issue when loading saved wallet addresses
-          }
+        if (data.success) {
+          setMetrics({
+            totalValue: data.totalValue || 0,
+            totalProfit: data.totalProfit || 0,
+            roi: data.roi || 0,
+            topPerformer: data.topPerformer || null,
+            recentActivity: data.recentActivity || [],
+            loading: false
+          })
         }
-
-        setLoading(false);
-      } catch {
-        setError("Failed to load dashboard");
-        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching metrics:', error)
+        setMetrics(prev => ({ ...prev, loading: false }))
       }
     }
-    loadDashboard();
-  }, [router]);
 
-  const fetchDapperData = async (walletAddress: string, email?: string, password?: string) => {
-    try {
-      setConnecting(true);
-      setError("");
-
-      let response;
-      if (email && password) {
-        // Manual connection with credentials
-        response = await fetch(`/api/dapper/connect`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            walletAddress,
-            dapperEmail: email,
-            dapperPassword: password
-          }),
-        });
-      } else {
-        // OAuth connection (no credentials needed)
-        response = await fetch(`/api/dapper/connect?address=${walletAddress}`, {
-          credentials: "include",
-        });
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (errorData.requiresCredentials) {
-          setError("Please provide your Dapper credentials to verify wallet ownership");
-          return;
-        }
-        throw new Error(errorData.error || "Failed to connect to Dapper wallet");
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setMoments(data.data.moments);
-        setPortfolio(data.data.portfolio);
-        setLastUpdated(data.data.lastUpdated);
-      } else {
-        throw new Error(data.error || "Failed to fetch Dapper data");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to connect to Dapper wallet. Please check your wallet address and credentials.");
-      console.error("Dapper connection error:", err);
-    } finally {
-      setConnecting(false);
+    if (walletAddress) {
+      fetchMetrics()
     }
-  };
+  }, [walletAddress])
 
-  const fetchFlowData = async (walletAddress: string) => {
-    try {
-      setConnecting(true);
-      setError("");
+  return metrics
+}
 
-      const response = await fetch(`/api/flow/connect`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          walletAddress
-        }),
-      });
+// Sample data for premium visualizations (TradingView-inspired)
+const portfolioChartData = [
+  { date: 'Jan', value: 45000, volume: 12 },
+  { date: 'Feb', value: 52000, volume: 19 },
+  { date: 'Mar', value: 48000, volume: 15 },
+  { date: 'Apr', value: 61000, volume: 24 },
+  { date: 'May', value: 58000, volume: 21 },
+  { date: 'Jun', value: 67000, volume: 31 },
+  { date: 'Jul', value: 72000, volume: 28 }
+]
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch Flow blockchain data");
-      }
+const performanceData = [
+  { name: 'LeBron James', value: 35, color: '#10B981' },
+  { name: 'Stephen Curry', value: 25, color: '#3B82F6' },
+  { name: 'Kevin Durant', value: 20, color: '#8B5CF6' },
+  { name: 'Giannis', value: 15, color: '#F59E0B' },
+  { name: 'Others', value: 5, color: '#6B7280' }
+]
 
-      const data = await response.json();
-      
-      if (data.success) {
-        setMoments(data.data.moments);
-        setPortfolio(data.data.portfolio);
-        setLastUpdated(data.data.lastUpdated);
-        
-        // Save wallet address to profile
-        await fetch("/api/profile/wallet", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            dapperWallet: walletAddress
-          }),
-        });
-      } else {
-        throw new Error(data.error || "Failed to fetch Flow blockchain data");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to connect to Flow blockchain. Please check your wallet address.");
-      console.error("Flow blockchain connection error:", err);
-    } finally {
-      setConnecting(false);
+// Webull-style Data Table Component
+const MomentTable = ({ moments }: { moments: any[] }) => (
+  <div className="bg-gray-900/50 rounded-xl border border-gray-800/50 overflow-hidden">
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-800/50">
+            <th className="text-left py-4 px-6 font-medium text-gray-300">Asset</th>
+            <th className="text-right py-4 px-4 font-medium text-gray-300">Current Price</th>
+            <th className="text-right py-4 px-4 font-medium text-gray-300">24h Change</th>
+            <th className="text-right py-4 px-4 font-medium text-gray-300">P&L</th>
+            <th className="text-right py-4 px-4 font-medium text-gray-300">ROI</th>
+            <th className="text-right py-4 px-4 font-medium text-gray-300">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {moments.map((moment, index) => (
+            <tr key={index} className="border-b border-gray-800/30 hover:bg-gray-800/30 transition-colors group">
+              <td className="py-4 px-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Star className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-white">{moment.player}</div>
+                    <div className="text-sm text-gray-400">#{moment.serialNumber || `${index + 1000}`}</div>
+                  </div>
+                </div>
+              </td>
+              <td className="text-right py-4 px-4 font-medium text-white">
+                ${moment.currentPrice?.toLocaleString() || '---'}
+              </td>
+              <td className="text-right py-4 px-4">
+                <span className={`flex items-center justify-end space-x-1 ${
+                  Math.random() > 0.5 ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {Math.random() > 0.5 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                  <span>{((Math.random() - 0.5) * 20).toFixed(2)}%</span>
+                </span>
+              </td>
+              <td className="text-right py-4 px-4">
+                <span className={`font-medium ${
+                  (moment.profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  ${Math.abs(moment.profit || 0).toLocaleString()}
+                </span>
+              </td>
+              <td className="text-right py-4 px-4">
+                <span className={`font-medium ${
+                  (moment.roi || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {((moment.roi || 0) * 100).toFixed(2)}%
+                </span>
+              </td>
+              <td className="text-right py-4 px-4">
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)
+
+export default function PremiumDashboard() {
+  const searchParams = useSearchParams()
+  const walletAddress = searchParams.get('wallet') || 'demo-wallet'
+  const { totalValue, totalProfit, roi, loading } = usePortfolioMetrics(walletAddress)
+  
+  const [selectedTimeframe, setSelectedTimeframe] = useState('7D')
+  const [moments, setMoments] = useState<any[]>([])
+
+  // Sample moments data (would come from API)
+  const sampleMoments = [
+    { player: 'LeBron James', currentPrice: 1250, profit: 250, roi: 0.25, serialNumber: '1234' },
+    { player: 'Stephen Curry', currentPrice: 890, profit: -45, roi: -0.048, serialNumber: '5678' },
+    { player: 'Kevin Durant', currentPrice: 1580, profit: 480, roi: 0.44, serialNumber: '9012' },
+    { player: 'Giannis Antetokounmpo', currentPrice: 2100, profit: 850, roi: 0.68, serialNumber: '3456' },
+    { player: 'Luka Dončić', currentPrice: 1750, profit: 320, roi: 0.22, serialNumber: '7890' }
+  ]
+
+  useEffect(() => {
+    setMoments(sampleMoments)
+  }, [])
+
+  const formatValue = (value: number) => {
+    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`
+    if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`
+    return `$${value.toLocaleString()}`
+  }
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 rounded-lg p-3 shadow-xl">
+          <p className="text-gray-300 text-sm mb-1">{label}</p>
+          <p className="text-white font-medium">
+            Value: {formatValue(payload[0].value)}
+          </p>
+        </div>
+      )
     }
-  };
-
-  const handleOAuthConnect = async () => {
-    try {
-      setConnecting(true);
-      setError("");
-
-      const response = await fetch("/api/dapper/oauth/connect", {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to initiate OAuth connection");
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        if (data.authUrl) {
-          // Redirect to Dapper OAuth
-          window.location.href = data.authUrl;
-        } else if (data.walletAddress) {
-          // Already connected
-          setDapperWallet(data.walletAddress);
-          await fetchDapperData(data.walletAddress);
-        }
-      } else {
-        throw new Error(data.error || "OAuth connection failed");
-      }
-    } catch (err) {
-      setError("Failed to connect with Dapper OAuth");
-      console.error("OAuth connection error:", err);
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  const handleConnectWallet = async () => {
-    if (!dapperEmail || !dapperPassword) {
-      setError("Please provide your Dapper credentials to verify wallet ownership");
-      return;
-    }
-
-    // Save wallet credentials and get wallet address
-    try {
-      const saveRes = await fetch("/api/profile/wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ dapperEmail, dapperPassword }),
-      });
-
-      if (!saveRes.ok) {
-        const errorData = await saveRes.json();
-        throw new Error(errorData.error || "Failed to save wallet credentials");
-      }
-
-      const saveData = await saveRes.json();
-      setDapperWallet(saveData.dapperWallet);
-
-      // Then fetch Dapper data with credentials
-      await fetchDapperData(saveData.dapperWallet, dapperEmail, dapperPassword);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to connect wallet");
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
-
-  const formatPercentage = (percentage: number) => {
-    return `${percentage >= 0 ? '+' : ''}${percentage.toFixed(2)}%`;
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#181A1B] to-[#1D428A] flex items-center justify-center">
-        <span className="inline-block h-12 w-12 border-4 border-[#FDB927] border-t-transparent rounded-full animate-spin"></span>
-      </div>
-    );
+    return null
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#181A1B] to-[#1D428A] font-[Inter,sans-serif] text-white relative overflow-x-hidden">
-      {/* Subtle court background */}
-      <div className="absolute inset-0 z-0 pointer-events-none" style={{ background: 'url("/court-pattern.svg") repeat', opacity: 0.08 }} />
-      
-      {/* Header */}
-      <header className="relative z-10 bg-black/70 backdrop-blur-md border-b border-[#222]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-6">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-[#C8102E] to-[#1D428A] mr-2">
-              <span className="text-2xl">🏀</span>
-              <span className="text-xl -ml-2">📊</span>
+    <div className="min-h-screen bg-black text-white">
+      {/* Premium Header - Koyfin Style */}
+      <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl border-b border-gray-800/50">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-8">
+              <Link href="/" className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-semibold tracking-tight">CollectorPRO</span>
+              </Link>
+              
+              <nav className="hidden md:flex items-center space-x-6">
+                <Link href="/dashboard" className="text-blue-400 font-medium">Dashboard</Link>
+                <Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</Link>
+                <Link href="#" className="text-gray-400 hover:text-white transition-colors">Analytics</Link>
+                <Link href="#" className="text-gray-400 hover:text-white transition-colors">Research</Link>
+              </nav>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">CollectorPRO</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-300 text-sm">{userEmail}</span>
-            <button
-              onClick={() => router.push("/profile")}
-              className="bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-4 py-2 rounded-full font-bold transition-all duration-200 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
-            >
-              Profile
-            </button>
+
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input 
+                  type="text"
+                  placeholder="Search moments..."
+                  className="bg-gray-900/50 border border-gray-700/50 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all w-64"
+                />
+              </div>
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                <Download className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Wallet Connection */}
-        {!dapperWallet ? (
-          <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-[#23272A] mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">Connect Your NBA Top Shot Collection</h2>
-            <p className="text-gray-300 mb-6">
-              Choose your preferred method to connect and view your real NBA Top Shot collection and portfolio analytics.
-            </p>
-            
-            {/* Flow Blockchain Connection (Livetoken.co approach) */}
-            <div className="mb-6 p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
-              <h3 className="text-lg font-semibold text-white mb-2">🔗 Flow Blockchain (Recommended)</h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Connect directly to the Flow blockchain like Livetoken.co. Enter your Flow wallet address to view your NBA Top Shot collection.
-              </p>
-              
-              <div className="space-y-4 mb-4">
-                <div>
-                  <input
-                    type="text"
-                    value={dapperWallet}
-                    onChange={(e) => setDapperWallet(e.target.value)}
-                    placeholder="Enter your Flow wallet address (0x...)"
-                    className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
-                  />
-                </div>
-                <p className="text-green-400 text-sm">
-                  ✅ Direct blockchain connection - no credentials needed. Works like Livetoken.co.
-                </p>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Premium KPI Cards - Koyfin Style */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border-gray-700/50 p-6 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <DollarSign className="w-5 h-5 text-blue-400" />
               </div>
-
-              <button
-                onClick={() => fetchFlowData(dapperWallet)}
-                disabled={connecting || !dapperWallet}
-                className="w-full bg-gradient-to-r from-[#00D4AA] to-[#0099CC] hover:from-[#0099CC] hover:to-[#00D4AA] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#00D4AA]"
-              >
-                {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
-                {connecting ? "Connecting..." : "🔗 Connect to Flow Blockchain"}
-              </button>
-            </div>
-
-            {/* OAuth Connection Option */}
-            <div className="mb-6 p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
-              <h3 className="text-lg font-semibold text-white mb-2">🔐 Dapper OAuth Connect</h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Connect securely with your Dapper account using OAuth. Your Dapper account email can be different from your CollectorPRO login email.
-              </p>
-              <button
-                onClick={handleOAuthConnect}
-                disabled={connecting}
-                className="bg-gradient-to-r from-[#FDB927] to-[#C8102E] hover:from-[#1D428A] hover:to-[#FDB927] text-black px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
-              >
-                {connecting && <span className="inline-block h-5 w-5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>}
-                {connecting ? "Connecting..." : "🔗 Connect with Dapper OAuth"}
-              </button>
-            </div>
-
-            {/* Manual Dapper Connection Option */}
-            <div className="p-4 bg-[#23272A]/50 rounded-lg border border-[#333]">
-              <h3 className="text-lg font-semibold text-white mb-2">📝 Manual Dapper Connection</h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Enter your Dapper account credentials to connect your wallet. The system will automatically find and connect your NBA Top Shot wallet.
-              </p>
-              
-              {/* Dapper Credentials */}
-              <div className="space-y-4 mb-4">
-                <div>
-                  <input
-                    type="email"
-                    value={dapperEmail}
-                    onChange={(e) => setDapperEmail(e.target.value)}
-                    placeholder="Your Dapper account email"
-                    className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
-                  />
-                </div>
-                <div>
-                  <input
-                    type="password"
-                    value={dapperPassword}
-                    onChange={(e) => setDapperPassword(e.target.value)}
-                    placeholder="Your Dapper account password"
-                    className="w-full px-4 py-3 rounded-lg bg-[#181A1B] text-white border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#FDB927] focus:border-[#FDB927] transition-all duration-200 placeholder-gray-400"
-                  />
-                </div>
-                <p className="text-yellow-400 text-sm">
-                  🔒 Your Dapper credentials are only used to verify wallet ownership and are not stored.
-                </p>
+              <div className="text-2xl font-bold text-white">
+                {loading ? '---' : formatValue(totalValue)}
               </div>
-
-              <button
-                onClick={handleConnectWallet}
-                disabled={connecting}
-                className="w-full bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
-              >
-                {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
-                {connecting ? "Connecting..." : "Connect Dapper Wallet"}
-              </button>
             </div>
-          </div>
-        ) : (
-          <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-[#23272A] mb-8">
-            <div className="flex justify-between items-center mb-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-300">Portfolio Value</p>
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="w-4 h-4 text-green-400" />
+                <span className="text-sm text-green-400">+2.4% today</span>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border-gray-700/50 p-6 hover:shadow-2xl hover:shadow-green-500/10 transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-green-500/10 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-green-400" />
+              </div>
+              <div className="text-2xl font-bold text-white">
+                {loading ? '---' : formatValue(Math.abs(totalProfit))}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-300">Total P&L</p>
+              <div className="flex items-center space-x-2">
+                <ArrowUpRight className="w-4 h-4 text-green-400" />
+                <span className="text-sm text-green-400">{((roi || 0) * 100).toFixed(2)}% ROI</span>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border-gray-700/50 p-6 hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-purple-500/10 rounded-lg">
+                <Target className="w-5 h-5 text-purple-400" />
+              </div>
+              <div className="text-2xl font-bold text-white">
+                {moments.length}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-300">Total Moments</p>
+              <div className="flex items-center space-x-2">
+                <Activity className="w-4 h-4 text-purple-400" />
+                <span className="text-sm text-purple-400">5 series</span>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border-gray-700/50 p-6 hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-orange-500/10 rounded-lg">
+                <Zap className="w-5 h-5 text-orange-400" />
+              </div>
+              <div className="text-2xl font-bold text-white">
+                A+
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-300">Portfolio Score</p>
+              <div className="flex items-center space-x-2">
+                <Star className="w-4 h-4 text-orange-400" />
+                <span className="text-sm text-orange-400">Top 15%</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          {/* TradingView-Style Chart */}
+          <Card className="lg:col-span-2 bg-gradient-to-br from-gray-900/50 to-gray-800/30 border-gray-700/50 p-6">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-bold text-white">Connected Wallet</h2>
-                <p className="text-gray-400 text-sm">{dapperWallet}</p>
+                <h3 className="text-lg font-semibold text-white mb-1">Portfolio Performance</h3>
+                <p className="text-sm text-gray-400">Track your collection's value over time</p>
               </div>
-              <button
-                onClick={() => {
-                  setDapperWallet("");
-                  setDapperEmail("");
-                  setDapperPassword("");
-                  setMoments([]);
-                  setPortfolio(null);
-                  setError("");
-                }}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Disconnect
-              </button>
+              <div className="flex items-center space-x-2">
+                {['1D', '7D', '1M', '3M', '1Y', 'ALL'].map((timeframe) => (
+                  <button
+                    key={timeframe}
+                    onClick={() => setSelectedTimeframe(timeframe)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      selectedTimeframe === timeframe
+                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                    }`}
+                  >
+                    {timeframe}
+                  </button>
+                ))}
+              </div>
             </div>
-            <p className="text-gray-300 text-sm">
-              Your wallet is connected. Click &ldquo;Load Moments&rdquo; to view your collection.
-            </p>
             
-            {/* Load Moments Button */}
-            <div className="mt-4">
-              <button
-                onClick={() => fetchDapperData(dapperWallet, dapperEmail, dapperPassword)}
-                disabled={connecting || !dapperEmail || !dapperPassword}
-                className="w-full bg-gradient-to-r from-[#C8102E] to-[#1D428A] hover:from-[#FDB927] hover:to-[#C8102E] text-white px-6 py-3 rounded-full font-bold transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FDB927]"
-              >
-                {connecting && <span className="inline-block h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
-                {connecting ? "Loading..." : "Load Moments"}
-              </button>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={portfolioChartData}>
+                  <defs>
+                    <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.3} />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#6B7280"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis 
+                    stroke="#6B7280"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => formatValue(value)}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#3B82F6"
+                    strokeWidth={2}
+                    fill="url(#colorGradient)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-        )}
+          </Card>
 
-        {/* Portfolio Overview */}
-        {portfolio && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-[#23272A]">
-              <h3 className="text-gray-400 text-sm font-medium mb-2">Portfolio Value</h3>
-              <p className="text-2xl font-bold text-white">{formatCurrency(portfolio.totalValue)}</p>
+          {/* Performance Breakdown */}
+          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border-gray-700/50 p-6">
+            <h3 className="text-lg font-semibold text-white mb-6">Top Performers</h3>
+            
+            <div className="h-48 mb-6">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={performanceData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {performanceData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: any) => [`${value}%`, 'Allocation']}
+                    contentStyle={{
+                      backgroundColor: '#111827',
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: '#fff'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-            <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-[#23272A]">
-              <h3 className="text-gray-400 text-sm font-medium mb-2">Total Moments</h3>
-              <p className="text-2xl font-bold text-white">{portfolio.totalMoments}</p>
-            </div>
-            <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-[#23272A]">
-              <h3 className="text-gray-400 text-sm font-medium mb-2">Total Profit/Loss</h3>
-              <p className={`text-2xl font-bold ${portfolio.totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {formatCurrency(portfolio.totalProfit)}
-              </p>
-            </div>
-            <div className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-[#23272A]">
-              <h3 className="text-gray-400 text-sm font-medium mb-2">ROI</h3>
-              <p className={`text-2xl font-bold ${portfolio.profitPercentage >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {formatPercentage(portfolio.profitPercentage)}
-              </p>
-            </div>
-          </div>
-        )}
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-8">
-            <p className="text-red-400">{error}</p>
-          </div>
-        )}
-
-        {/* Last Updated */}
-        {lastUpdated && (
-          <div className="text-gray-400 text-sm mb-6">
-            Last updated: {new Date(lastUpdated).toLocaleString()}
-          </div>
-        )}
-
-        {/* Moments Grid */}
-        {moments.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {moments.map((moment) => (
-              <div key={moment.id} className="bg-[#181A1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-[#23272A] overflow-hidden">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">{moment.playerName}</h3>
-                      <p className="text-gray-400 text-sm">{moment.teamName}</p>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                      moment.rarity === 'LEGENDARY' ? 'bg-yellow-500/20 text-yellow-400' :
-                      moment.rarity === 'RARE' ? 'bg-blue-500/20 text-blue-400' :
-                      'bg-gray-500/20 text-gray-400'
-                    }`}>
-                      {moment.rarity}
-                    </span>
+            <div className="space-y-3">
+              {performanceData.map((item, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-sm text-gray-300">{item.name}</span>
                   </div>
-                  
-                  <div className="space-y-2 mb-4">
-                    <p className="text-sm text-gray-300">
-                      <span className="font-medium">Play:</span> {moment.playCategory} - {moment.playType}
-                    </p>
-                    <p className="text-sm text-gray-300">
-                      <span className="font-medium">Serial:</span> #{moment.serialNumber} / {moment.totalCirculation}
-                    </p>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-sm text-gray-400">Current Value</p>
-                      <p className="text-lg font-bold text-white">{formatCurrency(moment.currentValue || 0)}</p>
-                    </div>
-                    {moment.acquisitionPrice && (
-                      <div className="text-right">
-                        <p className="text-sm text-gray-400">Acquired</p>
-                        <p className="text-sm text-white">{formatCurrency(moment.acquisitionPrice)}</p>
-                      </div>
-                    )}
-                  </div>
+                  <span className="text-sm font-medium text-white">{item.value}%</span>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        {/* Webull-Style Data Table */}
+        <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border-gray-700/50 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-1">Your Collection</h3>
+              <p className="text-sm text-gray-400">Detailed view of all your NBA Top Shot moments</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                <Filter className="w-4 h-4 mr-2" />
+                Filter
+              </Button>
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                <Calendar className="w-4 h-4 mr-2" />
+                Date Range
+              </Button>
+            </div>
           </div>
-        ) : dapperWallet ? (
-          <div className="text-center py-12">
-            <p className="text-gray-400 text-lg">No moments found in your collection.</p>
-            <p className="text-gray-500 text-sm mt-2">Make sure your wallet address is correct and contains NBA Top Shot moments.</p>
-          </div>
-        ) : null}
-      </main>
+
+          <MomentTable moments={moments} />
+        </Card>
+      </div>
     </div>
-  );
+  )
 } 
