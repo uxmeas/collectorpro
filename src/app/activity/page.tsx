@@ -27,7 +27,9 @@ import {
   Star,
   Zap,
   RefreshCw,
-  Loader2
+  Loader2,
+  ExternalLink,
+  Play
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -95,11 +97,11 @@ const formatPrice = (price: { usd: number; flow: number }) => ({
 
 const getRarityColor = (rarity: string) => {
   switch (rarity) {
-    case 'Common': return 'bg-gray-500'
-    case 'Rare': return 'bg-blue-500'
-    case 'Legendary': return 'bg-purple-500'
-    case 'Ultimate': return 'bg-yellow-500'
-    default: return 'bg-gray-500'
+    case 'Common': return 'bg-gray-100 text-gray-800 border-gray-300'
+    case 'Rare': return 'bg-blue-100 text-blue-800 border-blue-300'
+    case 'Legendary': return 'bg-purple-100 text-purple-800 border-purple-300'
+    case 'Ultimate': return 'bg-yellow-100 text-yellow-800 border-yellow-300'
+    default: return 'bg-gray-100 text-gray-800 border-gray-300'
   }
 }
 
@@ -114,6 +116,17 @@ const getEventIcon = (event: ActivityEvent) => {
   }
 }
 
+const getEventColor = (event: ActivityEvent) => {
+  switch (event) {
+    case 'Sale': return 'text-green-600 bg-green-50 border border-green-200'
+    case 'Mint': return 'text-blue-600 bg-blue-50 border border-blue-200'
+    case 'Transfer': return 'text-purple-600 bg-purple-50 border border-purple-200'
+    case 'Pack Opening': return 'text-orange-600 bg-orange-50 border border-orange-200'
+    case 'Listing': return 'text-indigo-600 bg-indigo-50 border border-indigo-200'
+    default: return 'text-gray-600 bg-gray-50 border border-gray-200'
+  }
+}
+
 interface FilterSectionProps {
   title: string
   children: React.ReactNode
@@ -124,10 +137,10 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
   const [isOpen, setIsOpen] = useState(defaultOpen)
   
   return (
-    <div className="border-b border-gray-800 pb-4 mb-4">
+    <div className="border-b border-gray-200 pb-4 mb-4">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full text-left text-sm font-medium text-gray-200 hover:text-white transition-colors"
+        className="flex items-center justify-between w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
       >
         {title}
         {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -282,13 +295,13 @@ export default function ActivityPage() {
   }, 0)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-gray-50">
       <div className="flex">
-        {/* Left Sidebar */}
-        <div className="w-80 bg-[#1a1a1a] border-r border-gray-800 min-h-screen p-6">
+        {/* Left Sidebar - NBA TopShot Style */}
+        <div className="w-80 bg-white border-r border-gray-200 min-h-screen p-6 shadow-sm">
           <div className="mb-6">
-            <h2 className="text-xl font-bold mb-2">NBA TopShot Activity</h2>
-            <p className="text-gray-400 text-sm">Real-time Flow blockchain transactions</p>
+            <h2 className="text-xl font-bold mb-2 text-gray-900">NBA Top Shot Activity</h2>
+            <p className="text-gray-600 text-sm">Real-time marketplace transactions</p>
             {lastUpdate && (
               <p className="text-xs text-gray-500 mt-1">
                 Last updated: {lastUpdate.toLocaleTimeString()}
@@ -297,7 +310,7 @@ export default function ActivityPage() {
           </div>
 
           <ScrollArea className="h-[calc(100vh-140px)]">
-            {/* Status Filters */}
+            {/* Transaction Type Filters */}
             <FilterSection title="Transaction Type">
               <div className="space-y-3">
                 {['Sale', 'Mint', 'Transfer', 'Pack Opening'].map(status => (
@@ -329,7 +342,7 @@ export default function ActivityPage() {
                       ...prev,
                       priceRange: { ...prev.priceRange, min: e.target.value }
                     }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white border-gray-300"
                   />
                   <Input
                     placeholder="Max USD"
@@ -338,15 +351,15 @@ export default function ActivityPage() {
                       ...prev,
                       priceRange: { ...prev.priceRange, max: e.target.value }
                     }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white border-gray-300"
                   />
                 </div>
-                <p className="text-xs text-gray-400">USD price range</p>
+                <p className="text-xs text-gray-500">USD price range</p>
               </div>
             </FilterSection>
 
-            {/* NBA TopShot Sets */}
-            <FilterSection title="NBA TopShot Sets">
+            {/* NBA Top Shot Sets */}
+            <FilterSection title="NBA Top Shot Sets">
               <div className="space-y-3">
                 {['Base Set', 'Rare', 'Legendary', 'Championship', 'Playoffs', 'All-Star', 'Rising Stars'].map(set => (
                   <div key={set} className="flex items-center space-x-2">
@@ -367,35 +380,35 @@ export default function ActivityPage() {
           </ScrollArea>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 p-6">
+        {/* Main Content - NBA TopShot Style */}
+        <div className="flex-1 p-6 bg-gray-50">
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h1 className="text-2xl font-bold mb-1 flex items-center gap-3">
-                  Live NBA TopShot Activity
-                  {loading && <Loader2 className="h-5 w-5 animate-spin text-blue-400" />}
+                <h1 className="text-3xl font-bold mb-2 text-gray-900 flex items-center gap-3">
+                  Live NBA Top Shot Activity
+                  {loading && <Loader2 className="h-5 w-5 animate-spin text-blue-500" />}
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-green-400 font-medium">LIVE</span>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full border border-green-200">LIVE</span>
                   </div>
                 </h1>
-                <p className="text-gray-400">Real-time Flow blockchain transactions • Auto-refreshes every 30s</p>
+                <p className="text-gray-600">Real-time marketplace transactions • Auto-refreshes every 30s</p>
               </div>
               <div className="flex items-center gap-3">
                 <Input
                   placeholder="Search players or plays..."
                   value={searchTerm}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                  className="w-64 bg-gray-800 border-gray-700"
+                  className="w-64 bg-white border-gray-300"
                 />
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => fetchActivityData()}
                   disabled={loading}
-                  className="border-gray-700"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
                 >
                   <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
                   Refresh
@@ -405,15 +418,15 @@ export default function ActivityPage() {
 
             {/* Error State */}
             {error && (
-              <div className="mb-4 p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <X className="h-4 w-4 text-red-400" />
-                  <span className="text-red-400 text-sm">Error loading activity data: {error}</span>
+                  <X className="h-4 w-4 text-red-500" />
+                  <span className="text-red-700 text-sm">Error loading activity data: {error}</span>
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={() => fetchActivityData()}
-                    className="ml-auto text-red-400 hover:text-red-300"
+                    className="ml-auto text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
                     Retry
                   </Button>
@@ -424,9 +437,9 @@ export default function ActivityPage() {
             {/* Active Filters */}
             {activeFilterCount > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-gray-400">Active filters:</span>
+                <span className="text-sm text-gray-600">Active filters:</span>
                 {filters.status.map(status => (
-                  <Badge key={status} variant="secondary" className="bg-blue-600/20 text-blue-400">
+                  <Badge key={status} variant="secondary" className="bg-blue-50 text-blue-700 border border-blue-200">
                     {status}
                     <X 
                       className="h-3 w-3 ml-1 cursor-pointer" 
@@ -435,7 +448,7 @@ export default function ActivityPage() {
                   </Badge>
                 ))}
                 {(filters.priceRange.min || filters.priceRange.max) && (
-                  <Badge variant="secondary" className="bg-green-600/20 text-green-400">
+                  <Badge variant="secondary" className="bg-green-50 text-green-700 border border-green-200">
                     ${filters.priceRange.min || '0'} - ${filters.priceRange.max || '∞'}
                     <X 
                       className="h-3 w-3 ml-1 cursor-pointer" 
@@ -447,7 +460,7 @@ export default function ActivityPage() {
                   variant="ghost" 
                   size="sm" 
                   onClick={clearAllFilters}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 >
                   Clear all
                 </Button>
@@ -455,18 +468,17 @@ export default function ActivityPage() {
             )}
           </div>
 
-          {/* Activity Table */}
-          <Card className="bg-[#1a1a1a] border-gray-800">
+          {/* Activity Table - NBA TopShot Marketplace Style */}
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-0">
               {/* Table Header */}
-              <div className="grid grid-cols-12 gap-4 p-4 border-b border-gray-800 text-sm font-medium text-gray-400">
+              <div className="grid grid-cols-12 gap-4 p-4 border-b border-gray-200 text-sm font-semibold text-gray-700 bg-gray-50">
                 <div className="col-span-2">EVENT</div>
-                <div className="col-span-3">MOMENT</div>
+                <div className="col-span-4">MOMENT</div>
                 <div className="col-span-2">PRICE</div>
                 <div className="col-span-1">RARITY</div>
                 <div className="col-span-1">SERIAL</div>
                 <div className="col-span-1">FROM</div>
-                <div className="col-span-1">TO</div>
                 <div className="col-span-1">TIME</div>
               </div>
 
@@ -474,8 +486,8 @@ export default function ActivityPage() {
               {loading && activities.length === 0 && (
                 <div className="flex items-center justify-center py-12">
                   <div className="flex items-center gap-3">
-                    <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
-                    <span className="text-gray-400">Loading real NBA TopShot transactions...</span>
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                    <span className="text-gray-600">Loading real NBA Top Shot transactions...</span>
                   </div>
                 </div>
               )}
@@ -484,90 +496,91 @@ export default function ActivityPage() {
               {!loading && activities.length === 0 && !error && (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
-                    <Activity className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-300 mb-2">No transactions found</h3>
-                    <p className="text-gray-400">Try adjusting your filters or check back later.</p>
+                    <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-700 mb-2">No transactions found</h3>
+                    <p className="text-gray-500">Try adjusting your filters or check back later.</p>
                   </div>
                 </div>
               )}
 
-              {/* Activity Rows */}
+              {/* Activity Rows - NBA TopShot Style */}
               {filteredActivities.length > 0 && (
                 <ScrollArea className="h-[600px]">
                   {filteredActivities.map((activity, index) => (
                     <div 
                       key={`${activity.id}-${index}`}
-                      className="grid grid-cols-12 gap-4 p-4 border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
+                      className="grid grid-cols-12 gap-4 p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
                     >
                       {/* Event */}
                       <div className="col-span-2 flex items-center gap-2">
                         <div className={cn(
-                          "p-2 rounded-lg",
-                          activity.type === 'Sale' ? "bg-green-600/20 text-green-400" :
-                          activity.type === 'Mint' ? "bg-blue-600/20 text-blue-400" :
-                          activity.type === 'Transfer' ? "bg-purple-600/20 text-purple-400" :
-                          "bg-gray-600/20 text-gray-400"
+                          "p-2 rounded-lg flex items-center justify-center",
+                          getEventColor(activity.type)
                         )}>
                           {getEventIcon(activity.type)}
                         </div>
-                        <span className="text-sm font-medium">{activity.type}</span>
+                        <span className="text-sm font-medium text-gray-800">{activity.type}</span>
                       </div>
 
                       {/* Moment */}
-                      <div className="col-span-3 flex items-center gap-3">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={activity.thumbnail} alt={activity.playerName} />
-                          <AvatarFallback>{activity.playerName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-sm">{activity.playerName}</div>
-                          <div className="text-xs text-gray-400">{activity.playDescription}</div>
-                          <div className="text-xs text-gray-500">{activity.setName}</div>
+                      <div className="col-span-4 flex items-center gap-3">
+                        <div className="relative">
+                          <Avatar className="h-12 w-12 border-2 border-gray-200">
+                            <AvatarImage src={activity.thumbnail} alt={activity.playerName} />
+                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
+                              {activity.playerName.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -bottom-1 -right-1 bg-white border border-gray-200 rounded-full p-1">
+                            <Play className="h-2 w-2 text-gray-600" />
+                          </div>
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm text-gray-900 truncate">{activity.playerName}</div>
+                          <div className="text-xs text-gray-600 truncate">{activity.playDescription}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-1">
+                            <span>{activity.setName}</span>
+                            <span>•</span>
+                            <span>#{activity.serialNumber}</span>
+                          </div>
+                        </div>
+                        <ExternalLink className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer" />
                       </div>
 
                       {/* Price */}
                       <div className="col-span-2 flex items-center">
                         {activity.price ? (
                           <div>
-                            <div className="font-medium text-sm">{formatPrice(activity.price).usd}</div>
-                            <div className="text-xs text-gray-400">{formatPrice(activity.price).flow}</div>
+                            <div className="font-bold text-sm text-gray-900">{formatPrice(activity.price).usd}</div>
+                            <div className="text-xs text-gray-500">{formatPrice(activity.price).flow}</div>
                           </div>
                         ) : (
-                          <span className="text-gray-500 text-sm">—</span>
+                          <span className="text-gray-400 text-sm">—</span>
                         )}
                       </div>
 
                       {/* Rarity */}
                       <div className="col-span-1 flex items-center">
-                        <div className="flex items-center gap-2">
-                          <div className={cn("w-2 h-2 rounded-full", getRarityColor(activity.rarity))} />
-                          <span className="text-xs">{activity.rarity}</span>
-                        </div>
+                        <Badge className={cn("text-xs px-2 py-1 font-medium", getRarityColor(activity.rarity))}>
+                          {activity.rarity}
+                        </Badge>
                       </div>
 
                       {/* Serial Number */}
                       <div className="col-span-1 flex items-center">
-                        <span className="text-sm">#{activity.serialNumber}</span>
+                        <span className="text-sm font-mono text-gray-700">#{activity.serialNumber}</span>
                       </div>
 
                       {/* From */}
                       <div className="col-span-1 flex items-center">
-                        <span className="text-xs font-mono text-blue-400 cursor-pointer hover:underline">
+                        <span className="text-xs font-mono text-blue-600 cursor-pointer hover:underline">
                           {activity.from.length > 8 ? `${activity.from.substring(0, 6)}...` : activity.from}
-                        </span>
-                      </div>
-
-                      {/* To */}
-                      <div className="col-span-1 flex items-center">
-                        <span className="text-xs font-mono text-blue-400 cursor-pointer hover:underline">
-                          {activity.to.length > 8 ? `${activity.to.substring(0, 6)}...` : activity.to}
                         </span>
                       </div>
 
                       {/* Time */}
                       <div className="col-span-1 flex items-center">
-                        <span className="text-sm text-gray-400">{formatRelativeTime(activity.timestamp)}</span>
+                        <span className="text-sm text-gray-500">{formatRelativeTime(activity.timestamp)}</span>
                       </div>
                     </div>
                   ))}
@@ -576,17 +589,17 @@ export default function ActivityPage() {
             </CardContent>
           </Card>
 
-          {/* Footer Stats */}
+          {/* Footer Stats - NBA TopShot Style */}
           <div className="mt-6 grid grid-cols-4 gap-4">
-            <Card className="bg-[#1a1a1a] border-gray-800">
+            <Card className="bg-white border border-gray-200 shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-600/20 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-green-400" />
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <div className="text-sm text-gray-400">Total Sales</div>
-                    <div className="text-lg font-bold">
+                    <div className="text-sm text-gray-600">Total Sales</div>
+                    <div className="text-xl font-bold text-gray-900">
                       {metrics?.totalTransactions || filteredActivities.filter(a => a.type === 'Sale').length}
                     </div>
                   </div>
@@ -594,15 +607,15 @@ export default function ActivityPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#1a1a1a] border-gray-800">
+            <Card className="bg-white border border-gray-200 shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-600/20 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-blue-400" />
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <div className="text-sm text-gray-400">Volume (24h)</div>
-                    <div className="text-lg font-bold">
+                    <div className="text-sm text-gray-600">Volume (24h)</div>
+                    <div className="text-xl font-bold text-gray-900">
                       {metrics?.totalVolume ? formatPrice(metrics.totalVolume).usd : '—'}
                     </div>
                   </div>
@@ -610,15 +623,15 @@ export default function ActivityPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#1a1a1a] border-gray-800">
+            <Card className="bg-white border border-gray-200 shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-600/20 rounded-lg">
-                    <Users className="h-5 w-5 text-purple-400" />
+                  <div className="p-3 bg-purple-100 rounded-lg">
+                    <Users className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <div className="text-sm text-gray-400">Unique Traders</div>
-                    <div className="text-lg font-bold">
+                    <div className="text-sm text-gray-600">Unique Traders</div>
+                    <div className="text-xl font-bold text-gray-900">
                       {metrics?.uniqueTraders || '—'}
                     </div>
                   </div>
@@ -626,15 +639,15 @@ export default function ActivityPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#1a1a1a] border-gray-800">
+            <Card className="bg-white border border-gray-200 shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-yellow-600/20 rounded-lg">
-                    <Star className="h-5 w-5 text-yellow-400" />
+                  <div className="p-3 bg-orange-100 rounded-lg">
+                    <Star className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
-                    <div className="text-sm text-gray-400">Avg Sale Price</div>
-                    <div className="text-lg font-bold">
+                    <div className="text-sm text-gray-600">Avg Sale Price</div>
+                    <div className="text-xl font-bold text-gray-900">
                       {metrics?.averagePrice ? formatPrice(metrics.averagePrice).usd : '—'}
                     </div>
                   </div>
