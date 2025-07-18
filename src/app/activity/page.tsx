@@ -1,35 +1,20 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card"
+import { Card, CardContent } from "@/components/ui/Card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
   ChevronDown, 
   ChevronUp, 
   X, 
-  Filter,
-  TrendingUp,
-  TrendingDown,
-  Activity,
-  ShoppingCart,
-  Package,
-  ArrowRightLeft,
-  Clock,
-  DollarSign,
-  Users,
-  Star,
-  Zap,
   RefreshCw,
   Loader2,
-  ExternalLink,
-  Play
+  ExternalLink
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -85,47 +70,21 @@ const formatRelativeTime = (date: Date): string => {
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
   
-  if (minutes < 60) return `${minutes}m ago`
-  if (hours < 24) return `${hours}h ago`
-  return `${days}d ago`
-}
-
-const formatPrice = (price: { usd: number; flow: number }) => ({
-  usd: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price.usd),
-  flow: `${price.flow.toLocaleString()} FLOW`
-})
-
-const getRarityColor = (rarity: string) => {
-  switch (rarity) {
-    case 'Common': return 'bg-gray-100 text-gray-800 border-gray-300'
-    case 'Rare': return 'bg-blue-100 text-blue-800 border-blue-300'
-    case 'Legendary': return 'bg-purple-100 text-purple-800 border-purple-300'
-    case 'Ultimate': return 'bg-yellow-100 text-yellow-800 border-yellow-300'
-    default: return 'bg-gray-100 text-gray-800 border-gray-300'
+  if (days > 0) {
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit'
+    }).replace(',', ' ')
   }
+  if (hours > 0) return `${hours}h ago`
+  return `${minutes}m ago`
 }
 
-const getEventIcon = (event: ActivityEvent) => {
-  switch (event) {
-    case 'Sale': return <ShoppingCart className="h-4 w-4" />
-    case 'Mint': return <Zap className="h-4 w-4" />
-    case 'Transfer': return <ArrowRightLeft className="h-4 w-4" />
-    case 'Pack Opening': return <Package className="h-4 w-4" />
-    case 'Listing': return <TrendingUp className="h-4 w-4" />
-    default: return <Activity className="h-4 w-4" />
-  }
-}
-
-const getEventColor = (event: ActivityEvent) => {
-  switch (event) {
-    case 'Sale': return 'text-green-600 bg-green-50 border border-green-200'
-    case 'Mint': return 'text-blue-600 bg-blue-50 border border-blue-200'
-    case 'Transfer': return 'text-purple-600 bg-purple-50 border border-purple-200'
-    case 'Pack Opening': return 'text-orange-600 bg-orange-50 border border-orange-200'
-    case 'Listing': return 'text-indigo-600 bg-indigo-50 border border-indigo-200'
-    default: return 'text-gray-600 bg-gray-50 border border-gray-200'
-  }
-}
+const formatPrice = (price: { usd: number; flow: number }) => 
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price.usd)
 
 interface FilterSectionProps {
   title: string
@@ -137,10 +96,10 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
   const [isOpen, setIsOpen] = useState(defaultOpen)
   
   return (
-    <div className="border-b border-gray-200 pb-4 mb-4">
+    <div className="border-b border-gray-700 pb-4 mb-4">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+        className="flex items-center justify-between w-full text-left text-sm font-medium text-gray-300 hover:text-white transition-colors"
       >
         {title}
         {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -159,13 +118,11 @@ export default function ActivityPage() {
   
   const [filters, setFilters] = useState({
     status: [] as string[],
-    events: [] as string[],
     priceRange: { min: '', max: '' },
-    marketplaces: [] as string[],
-    leagues: [] as string[],
     sets: [] as string[]
   })
   const [searchTerm, setSearchTerm] = useState('')
+  const [activeTab, setActiveTab] = useState('LATEST PURCHASES')
 
   // Fetch real NBA TopShot activity data
   const fetchActivityData = async (showLoading = true) => {
@@ -175,7 +132,6 @@ export default function ActivityPage() {
 
       const params = new URLSearchParams()
       
-      // Add filters to params
       if (filters.status.length > 0) {
         params.append('eventTypes', filters.status.join(','))
       }
@@ -203,10 +159,8 @@ export default function ActivityPage() {
       const data = await response.json()
       
       if (data.success) {
-        // Transform API data to component format
         const transformedActivities = data.data.transactions.map((tx: any) => ({
           ...tx,
-          event: tx.type, // Map 'type' to 'event' for backwards compatibility
           timestamp: new Date(tx.timestamp)
         }))
         
@@ -221,8 +175,6 @@ export default function ActivityPage() {
     } catch (err) {
       console.error('❌ Error fetching activity data:', err)
       setError(err instanceof Error ? err.message : 'Failed to load activity data')
-      
-      // Fallback to some basic data if real API fails
       setActivities([])
       setMetrics(null)
     } finally {
@@ -230,39 +182,31 @@ export default function ActivityPage() {
     }
   }
 
-  // Auto-refresh data every 30 seconds
   useEffect(() => {
     fetchActivityData()
-    
     const interval = setInterval(() => {
-      fetchActivityData(false) // Don't show loading spinner for auto-refresh
-    }, 30000) // 30 seconds
-    
+      fetchActivityData(false)
+    }, 30000)
     return () => clearInterval(interval)
-  }, []) // Only run on mount
+  }, [])
 
-  // Refetch when filters change
   useEffect(() => {
     if (!loading) {
       fetchActivityData()
     }
   }, [filters])
 
-  // Filter the activities based on current filters
   const filteredActivities = useMemo(() => {
     return activities.filter(activity => {
-      // Status filter (already applied in API call, but filter locally too)
       if (filters.status.length > 0 && !filters.status.includes(activity.type)) {
         return false
       }
       
-      // Search filter
       if (searchTerm && !activity.playerName.toLowerCase().includes(searchTerm.toLowerCase()) &&
           !activity.playDescription.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false
       }
       
-      // Additional local filtering can be added here
       return true
     })
   }, [activities, filters, searchTerm])
@@ -276,41 +220,55 @@ export default function ActivityPage() {
     }))
   }
 
-  const clearAllFilters = () => {
-    setFilters({
-      status: [],
-      events: [],
-      priceRange: { min: '', max: '' },
-      marketplaces: [],
-      leagues: [],
-      sets: []
-    })
-    setSearchTerm('')
-  }
-
-  const activeFilterCount = Object.values(filters).reduce((count, filter) => {
-    if (Array.isArray(filter)) return count + filter.length
-    if (typeof filter === 'object' && filter.min || filter.max) return count + 1
-    return count
-  }, 0)
+  const tabs = ['EXPLORE', 'MOMENTS', 'PACKS', 'LATEST PURCHASES', 'TOP PURCHASES', 'VIP NFTS']
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* NBA TopShot Header Navigation */}
+      <div className="border-b border-gray-700">
+        <div className="flex items-center gap-8 px-6 py-4">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "text-sm font-medium transition-colors pb-4 border-b-2",
+                activeTab === tab 
+                  ? "text-white border-blue-500" 
+                  : "text-gray-400 hover:text-gray-300 border-transparent"
+              )}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex">
-        {/* Left Sidebar - NBA TopShot Style */}
-        <div className="w-80 bg-white border-r border-gray-200 min-h-screen p-6 shadow-sm">
+        {/* Left Sidebar - Filters */}
+        <div className="w-80 bg-gray-800 border-r border-gray-700 min-h-screen p-6">
           <div className="mb-6">
-            <h2 className="text-xl font-bold mb-2 text-gray-900">NBA Top Shot Activity</h2>
-            <p className="text-gray-600 text-sm">Real-time marketplace transactions</p>
-            {lastUpdate && (
-              <p className="text-xs text-gray-500 mt-1">
-                Last updated: {lastUpdate.toLocaleTimeString()}
-              </p>
-            )}
+            <h2 className="text-lg font-bold mb-2 text-white">Filters</h2>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Search moments..."
+                value={searchTerm}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
+              />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => fetchActivityData()}
+                disabled={loading}
+                className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              >
+                <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              </Button>
+            </div>
           </div>
 
-          <ScrollArea className="h-[calc(100vh-140px)]">
-            {/* Transaction Type Filters */}
+          <ScrollArea className="h-[calc(100vh-200px)]">
             <FilterSection title="Transaction Type">
               <div className="space-y-3">
                 {['Sale', 'Mint', 'Transfer', 'Pack Opening'].map(status => (
@@ -322,8 +280,7 @@ export default function ActivityPage() {
                         handleFilterChange('status', status, e.target.checked)
                       }
                     />
-                    <Label htmlFor={status} className="text-sm font-normal cursor-pointer flex items-center gap-2">
-                      {getEventIcon(status as ActivityEvent)}
+                    <Label htmlFor={status} className="text-sm text-gray-300 cursor-pointer">
                       {status}
                     </Label>
                   </div>
@@ -331,7 +288,6 @@ export default function ActivityPage() {
               </div>
             </FilterSection>
 
-            {/* Price Range */}
             <FilterSection title="Price Range">
               <div className="space-y-3">
                 <div className="flex gap-2">
@@ -342,7 +298,7 @@ export default function ActivityPage() {
                       ...prev,
                       priceRange: { ...prev.priceRange, min: e.target.value }
                     }))}
-                    className="bg-white border-gray-300"
+                    className="bg-gray-700 border-gray-600 text-white"
                   />
                   <Input
                     placeholder="Max USD"
@@ -351,17 +307,15 @@ export default function ActivityPage() {
                       ...prev,
                       priceRange: { ...prev.priceRange, max: e.target.value }
                     }))}
-                    className="bg-white border-gray-300"
+                    className="bg-gray-700 border-gray-600 text-white"
                   />
                 </div>
-                <p className="text-xs text-gray-500">USD price range</p>
               </div>
             </FilterSection>
 
-            {/* NBA Top Shot Sets */}
-            <FilterSection title="NBA Top Shot Sets">
+            <FilterSection title="Sets">
               <div className="space-y-3">
-                {['Base Set', 'Rare', 'Legendary', 'Championship', 'Playoffs', 'All-Star', 'Rising Stars'].map(set => (
+                {['Base Set', 'Rare', 'Legendary', 'Championship', 'Playoffs', 'All-Star'].map(set => (
                   <div key={set} className="flex items-center space-x-2">
                     <Checkbox
                       id={set}
@@ -370,7 +324,7 @@ export default function ActivityPage() {
                         handleFilterChange('sets', set, e.target.checked)
                       }
                     />
-                    <Label htmlFor={set} className="text-sm font-normal cursor-pointer">
+                    <Label htmlFor={set} className="text-sm text-gray-300 cursor-pointer">
                       {set}
                     </Label>
                   </div>
@@ -380,280 +334,151 @@ export default function ActivityPage() {
           </ScrollArea>
         </div>
 
-        {/* Main Content - NBA TopShot Style */}
-        <div className="flex-1 p-6 bg-gray-50">
-          {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-3xl font-bold mb-2 text-gray-900 flex items-center gap-3">
-                  Live NBA Top Shot Activity
-                  {loading && <Loader2 className="h-5 w-5 animate-spin text-blue-500" />}
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full border border-green-200">LIVE</span>
-                  </div>
-                </h1>
-                <p className="text-gray-600">Real-time marketplace transactions • Auto-refreshes every 30s</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Input
-                  placeholder="Search players or plays..."
-                  value={searchTerm}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                  className="w-64 bg-white border-gray-300"
-                />
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => fetchActivityData()}
-                  disabled={loading}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                >
-                  <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-                  Refresh
-                </Button>
-              </div>
-            </div>
-
-            {/* Error State */}
-            {error && (
-              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <X className="h-4 w-4 text-red-500" />
-                  <span className="text-red-700 text-sm">Error loading activity data: {error}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => fetchActivityData()}
-                    className="ml-auto text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    Retry
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Active Filters */}
-            {activeFilterCount > 0 && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-gray-600">Active filters:</span>
-                {filters.status.map(status => (
-                  <Badge key={status} variant="secondary" className="bg-blue-50 text-blue-700 border border-blue-200">
-                    {status}
-                    <X 
-                      className="h-3 w-3 ml-1 cursor-pointer" 
-                      onClick={() => handleFilterChange('status', status, false)}
-                    />
-                  </Badge>
-                ))}
-                {(filters.priceRange.min || filters.priceRange.max) && (
-                  <Badge variant="secondary" className="bg-green-50 text-green-700 border border-green-200">
-                    ${filters.priceRange.min || '0'} - ${filters.priceRange.max || '∞'}
-                    <X 
-                      className="h-3 w-3 ml-1 cursor-pointer" 
-                      onClick={() => setFilters(prev => ({ ...prev, priceRange: { min: '', max: '' } }))}
-                    />
-                  </Badge>
-                )}
+        {/* Main Content - Exact NBA TopShot Table */}
+        <div className="flex-1 bg-gray-900">
+          {/* Error State */}
+          {error && (
+            <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-lg m-6">
+              <div className="flex items-center gap-2">
+                <X className="h-4 w-4 text-red-400" />
+                <span className="text-red-400 text-sm">Error loading data: {error}</span>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={clearAllFilters}
-                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  onClick={() => fetchActivityData()}
+                  className="ml-auto text-red-400 hover:text-red-300"
                 >
-                  Clear all
+                  Retry
                 </Button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Activity Table - NBA TopShot Marketplace Style */}
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardContent className="p-0">
-              {/* Table Header */}
-              <div className="grid grid-cols-12 gap-4 p-4 border-b border-gray-200 text-sm font-semibold text-gray-700 bg-gray-50">
-                <div className="col-span-2">EVENT</div>
-                <div className="col-span-4">MOMENT</div>
-                <div className="col-span-2">PRICE</div>
-                <div className="col-span-1">RARITY</div>
-                <div className="col-span-1">SERIAL</div>
-                <div className="col-span-1">FROM</div>
-                <div className="col-span-1">TIME</div>
+          {/* NBA TopShot Transactions Table */}
+          <div className="overflow-x-auto">
+            {/* Table Header - Exact NBA TopShot Style */}
+            <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-700 text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <div className="col-span-2">MOMENT</div>
+              <div className="col-span-1">PRICE</div>
+              <div className="col-span-2">SERIAL</div>
+              <div className="col-span-1">PARALLEL</div>
+              <div className="col-span-2">SET</div>
+              <div className="col-span-1">SERIES</div>
+              <div className="col-span-1">BUYER</div>
+              <div className="col-span-1">SELLER</div>
+              <div className="col-span-1">DATE/TIME</div>
+              <div className="col-span-1">TX</div>
+            </div>
+
+            {/* Loading State */}
+            {loading && activities.length === 0 && (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+                  <span className="text-gray-400">Loading NBA TopShot transactions...</span>
+                </div>
               </div>
+            )}
 
-              {/* Loading State */}
-              {loading && activities.length === 0 && (
-                <div className="flex items-center justify-center py-12">
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                    <span className="text-gray-600">Loading real NBA Top Shot transactions...</span>
+            {/* Transaction Rows - Exact NBA TopShot Style */}
+            <ScrollArea className="h-[calc(100vh-200px)]">
+              {filteredActivities.map((activity, index) => (
+                <div 
+                  key={`${activity.id}-${index}`}
+                  className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
+                >
+                  {/* MOMENT - Small thumbnail + player name */}
+                  <div className="col-span-2 flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
+                      <img 
+                        src={activity.thumbnail || '/api/placeholder/48/48'} 
+                        alt={activity.playerName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-white font-medium text-sm uppercase tracking-wide truncate">
+                        {activity.playerName}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PRICE - Green text like NBA TopShot */}
+                  <div className="col-span-1 flex items-center">
+                    {activity.price ? (
+                      <span className="text-green-400 font-bold text-sm">
+                        {formatPrice(activity.price)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500 text-sm">—</span>
+                    )}
+                  </div>
+
+                  {/* SERIAL - Rarity + Serial Number */}
+                  <div className="col-span-2 flex items-center">
+                    <div className="text-sm">
+                      <div className="text-white">
+                        {activity.rarity}
+                      </div>
+                      <div className="text-gray-400">
+                        #{activity.serialNumber}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PARALLEL */}
+                  <div className="col-span-1 flex items-center">
+                    <span className="text-gray-500 text-sm">--</span>
+                  </div>
+
+                  {/* SET */}
+                  <div className="col-span-2 flex items-center">
+                    <span className="text-gray-300 text-sm">{activity.setName}</span>
+                  </div>
+
+                  {/* SERIES */}
+                  <div className="col-span-1 flex items-center">
+                    <span className="text-gray-300 text-sm">{activity.series}</span>
+                  </div>
+
+                  {/* BUYER */}
+                  <div className="col-span-1 flex items-center">
+                    <span className="text-blue-400 text-sm font-mono">
+                      @{activity.to.length > 10 ? `${activity.to.substring(0, 8)}...` : activity.to}
+                    </span>
+                  </div>
+
+                  {/* SELLER */}
+                  <div className="col-span-1 flex items-center">
+                    <span className="text-blue-400 text-sm font-mono">
+                      @{activity.from.length > 10 ? `${activity.from.substring(0, 8)}...` : activity.from}
+                    </span>
+                  </div>
+
+                  {/* DATE/TIME */}
+                  <div className="col-span-1 flex items-center">
+                    <span className="text-gray-400 text-xs">
+                      {formatRelativeTime(activity.timestamp)}
+                    </span>
+                  </div>
+
+                  {/* TX - Transaction Link */}
+                  <div className="col-span-1 flex items-center">
+                    <ExternalLink className="h-4 w-4 text-gray-400 hover:text-white cursor-pointer" />
                   </div>
                 </div>
-              )}
+              ))}
 
               {/* Empty State */}
-              {!loading && activities.length === 0 && !error && (
+              {!loading && filteredActivities.length === 0 && !error && (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
-                    <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-700 mb-2">No transactions found</h3>
+                    <h3 className="text-lg font-medium text-gray-300 mb-2">No transactions found</h3>
                     <p className="text-gray-500">Try adjusting your filters or check back later.</p>
                   </div>
                 </div>
               )}
-
-              {/* Activity Rows - NBA TopShot Style */}
-              {filteredActivities.length > 0 && (
-                <ScrollArea className="h-[600px]">
-                  {filteredActivities.map((activity, index) => (
-                    <div 
-                      key={`${activity.id}-${index}`}
-                      className="grid grid-cols-12 gap-4 p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                    >
-                      {/* Event */}
-                      <div className="col-span-2 flex items-center gap-2">
-                        <div className={cn(
-                          "p-2 rounded-lg flex items-center justify-center",
-                          getEventColor(activity.type)
-                        )}>
-                          {getEventIcon(activity.type)}
-                        </div>
-                        <span className="text-sm font-medium text-gray-800">{activity.type}</span>
-                      </div>
-
-                      {/* Moment */}
-                      <div className="col-span-4 flex items-center gap-3">
-                        <div className="relative">
-                          <Avatar className="h-12 w-12 border-2 border-gray-200">
-                            <AvatarImage src={activity.thumbnail} alt={activity.playerName} />
-                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
-                              {activity.playerName.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="absolute -bottom-1 -right-1 bg-white border border-gray-200 rounded-full p-1">
-                            <Play className="h-2 w-2 text-gray-600" />
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm text-gray-900 truncate">{activity.playerName}</div>
-                          <div className="text-xs text-gray-600 truncate">{activity.playDescription}</div>
-                          <div className="text-xs text-gray-500 flex items-center gap-1">
-                            <span>{activity.setName}</span>
-                            <span>•</span>
-                            <span>#{activity.serialNumber}</span>
-                          </div>
-                        </div>
-                        <ExternalLink className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer" />
-                      </div>
-
-                      {/* Price */}
-                      <div className="col-span-2 flex items-center">
-                        {activity.price ? (
-                          <div>
-                            <div className="font-bold text-sm text-gray-900">{formatPrice(activity.price).usd}</div>
-                            <div className="text-xs text-gray-500">{formatPrice(activity.price).flow}</div>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">—</span>
-                        )}
-                      </div>
-
-                      {/* Rarity */}
-                      <div className="col-span-1 flex items-center">
-                        <Badge className={cn("text-xs px-2 py-1 font-medium", getRarityColor(activity.rarity))}>
-                          {activity.rarity}
-                        </Badge>
-                      </div>
-
-                      {/* Serial Number */}
-                      <div className="col-span-1 flex items-center">
-                        <span className="text-sm font-mono text-gray-700">#{activity.serialNumber}</span>
-                      </div>
-
-                      {/* From */}
-                      <div className="col-span-1 flex items-center">
-                        <span className="text-xs font-mono text-blue-600 cursor-pointer hover:underline">
-                          {activity.from.length > 8 ? `${activity.from.substring(0, 6)}...` : activity.from}
-                        </span>
-                      </div>
-
-                      {/* Time */}
-                      <div className="col-span-1 flex items-center">
-                        <span className="text-sm text-gray-500">{formatRelativeTime(activity.timestamp)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Footer Stats - NBA TopShot Style */}
-          <div className="mt-6 grid grid-cols-4 gap-4">
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-600">Total Sales</div>
-                    <div className="text-xl font-bold text-gray-900">
-                      {metrics?.totalTransactions || filteredActivities.filter(a => a.type === 'Sale').length}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-600">Volume (24h)</div>
-                    <div className="text-xl font-bold text-gray-900">
-                      {metrics?.totalVolume ? formatPrice(metrics.totalVolume).usd : '—'}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-purple-100 rounded-lg">
-                    <Users className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-600">Unique Traders</div>
-                    <div className="text-xl font-bold text-gray-900">
-                      {metrics?.uniqueTraders || '—'}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-orange-100 rounded-lg">
-                    <Star className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-600">Avg Sale Price</div>
-                    <div className="text-xl font-bold text-gray-900">
-                      {metrics?.averagePrice ? formatPrice(metrics.averagePrice).usd : '—'}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            </ScrollArea>
           </div>
         </div>
       </div>
