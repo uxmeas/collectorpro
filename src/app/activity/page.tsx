@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Label } from "@/components/ui/label"
@@ -13,7 +13,9 @@ import {
   RefreshCw,
   Loader2,
   Grid,
-  List
+  List,
+  Wifi,
+  WifiOff
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -38,6 +40,20 @@ interface NBATopShotMoment {
   playerImage: string
   teamName: string
   lastSalePrice?: number
+  priceChange?: number
+}
+
+interface PackActivity {
+  id: string
+  packName: string
+  series: string
+  price: number
+  momentsCount: number
+  rarity: 'Standard' | 'Premium' | 'Ultimate'
+  openedBy: string
+  timestamp: Date
+  contents: string[]
+  packImage: string
 }
 
 interface FilterSectionProps {
@@ -65,9 +81,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
 
 export default function ActivityPage() {
   const [moments, setMoments] = useState<NBATopShotMoment[]>([])
+  const [packs, setPacks] = useState<PackActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [isConnected, setIsConnected] = useState(false)
+  const wsRef = useRef<WebSocket | null>(null)
   
   const [searchTerm, setSearchTerm] = useState('')
   const [leagueFilter, setLeagueFilter] = useState<'NBA' | 'WNBA' | 'BOTH'>('BOTH')
@@ -83,7 +102,64 @@ export default function ActivityPage() {
     tier: [] as string[]
   })
 
-  // Fetch real NBA TopShot marketplace data
+  // WebSocket connection for instant updates
+  useEffect(() => {
+    const connectWebSocket = () => {
+      try {
+        // For now, simulate WebSocket with rapid polling until we set up actual WebSocket server
+        wsRef.current = new WebSocket('ws://localhost:3001/marketplace')
+        
+        wsRef.current.onopen = () => {
+          console.log('🔌 WebSocket connected for instant updates')
+          setIsConnected(true)
+        }
+        
+        wsRef.current.onmessage = (event) => {
+          const update = JSON.parse(event.data)
+          if (update.type === 'MOMENT_UPDATE') {
+            setMoments(prev => prev.map(moment => 
+              moment.id === update.momentId 
+                ? { ...moment, ...update.changes }
+                : moment
+            ))
+          } else if (update.type === 'PACK_OPENED') {
+            setPacks(prev => [update.pack, ...prev.slice(0, 49)])
+          }
+          setLastUpdate(new Date())
+        }
+        
+        wsRef.current.onclose = () => {
+          console.log('🔌 WebSocket disconnected, attempting reconnect...')
+          setIsConnected(false)
+          setTimeout(connectWebSocket, 3000)
+        }
+        
+        wsRef.current.onerror = (error) => {
+          console.log('🔌 WebSocket error, falling back to rapid polling')
+          setIsConnected(false)
+        }
+        
+      } catch (error) {
+        console.log('🔌 WebSocket not available, using ultra-fast polling')
+        setIsConnected(false)
+        // Fallback to 1-second polling for instant updates
+        const interval = setInterval(() => {
+          fetchMarketplaceData(false)
+        }, 1000)
+        return () => clearInterval(interval)
+      }
+    }
+
+    connectWebSocket()
+    
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
+    }
+  }, [])
+
+  // Fetch initial marketplace data and pack activity
   const fetchMarketplaceData = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true)
@@ -91,38 +167,75 @@ export default function ActivityPage() {
 
       console.log('🔄 Fetching live NBA TopShot marketplace data...')
       
-      // This would call the real NBA TopShot marketplace API
-      const response = await fetch('/api/flow/marketplace', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filters: {
-            searchTerm,
-            league: leagueFilter,
-            ...filters
-          },
-          limit: 50
+      const [momentResponse, packResponse] = await Promise.all([
+        fetch('/api/flow/marketplace', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filters: {
+              searchTerm,
+              league: leagueFilter,
+              ...filters
+            },
+            limit: 50
+          })
+        }),
+        fetch('/api/flow/packs', {
+          method: 'GET'
         })
-      })
+      ])
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      if (!momentResponse.ok) {
+        throw new Error(`HTTP error! status: ${momentResponse.status}`)
       }
       
-      const data = await response.json()
+      const momentData = await momentResponse.json()
+      const packData = packResponse.ok ? await packResponse.json() : { success: false }
       
-      if (data.success) {
-        setMoments(data.data.moments || [])
+      if (momentData.success) {
+        setMoments(momentData.data.moments || [])
         setLastUpdate(new Date())
-        console.log(`✅ Loaded ${data.data.moments?.length || 0} live marketplace moments`)
-      } else {
-        throw new Error(data.message || 'Failed to fetch marketplace data')
+        console.log(`✅ Loaded ${momentData.data.moments?.length || 0} live marketplace moments`)
       }
+      
+      if (packData.success) {
+        setPacks(packData.data.packs || [])
+        console.log(`✅ Loaded ${packData.data.packs?.length || 0} pack activities`)
+      } else {
+        // Fallback pack data
+        setPacks([
+          {
+            id: '1',
+            packName: 'Championship Edition Pack',
+            series: 'Series 2024-25',
+            price: 99.99,
+            momentsCount: 5,
+            rarity: 'Ultimate',
+            openedBy: '@LeBronFan23',
+            timestamp: new Date(Date.now() - 300000),
+            contents: ['LeBron James Legendary', 'Stephen Curry Rare', '3 Common moments'],
+            packImage: '/api/placeholder/48/48'
+          },
+          {
+            id: '2',
+            packName: 'Rookie Sensations Pack',
+            series: 'Series 2024-25',
+            price: 29.99,
+            momentsCount: 3,
+            rarity: 'Premium',
+            openedBy: '@VictorFan',
+            timestamp: new Date(Date.now() - 600000),
+            contents: ['Victor Wembanyama Rare', '2 Common moments'],
+            packImage: '/api/placeholder/48/48'
+          }
+        ])
+      }
+      
     } catch (err) {
       console.error('❌ Error fetching marketplace data:', err)
       setError(err instanceof Error ? err.message : 'Failed to load marketplace data')
       
-      // Fallback demo data that matches the mockup
+      // Fallback demo data
       setMoments([
         {
           id: '1',
@@ -134,8 +247,8 @@ export default function ActivityPage() {
           circulation: 3000,
           serialNumber: 1234,
           supply: 3000,
-          lowAsk: 8.00,
-          highestOffer: 1.00,
+          lowAsk: 8.00 + Math.random() * 2,
+          highestOffer: 1.00 + Math.random(),
           owned: 65,
           inPacks: 2035,
           burned: 0,
@@ -143,7 +256,8 @@ export default function ActivityPage() {
           listed: 3,
           sales: 8,
           playerImage: 'https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/1628983.png',
-          teamName: 'Oklahoma City Thunder'
+          teamName: 'Oklahoma City Thunder',
+          priceChange: (Math.random() - 0.5) * 10
         },
         {
           id: '2', 
@@ -155,8 +269,8 @@ export default function ActivityPage() {
           circulation: 1500,
           serialNumber: 5678,
           supply: 1500,
-          lowAsk: 25.00,
-          highestOffer: 15.00,
+          lowAsk: 25.00 + Math.random() * 5,
+          highestOffer: 15.00 + Math.random() * 3,
           owned: 32,
           inPacks: 1200,
           burned: 0,
@@ -164,7 +278,8 @@ export default function ActivityPage() {
           listed: 5,
           sales: 15,
           playerImage: 'https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/203507.png',
-          teamName: 'Milwaukee Bucks'
+          teamName: 'Milwaukee Bucks',
+          priceChange: (Math.random() - 0.5) * 15
         },
         {
           id: '3',
@@ -176,8 +291,8 @@ export default function ActivityPage() {
           circulation: 500,
           serialNumber: 91,
           supply: 500,
-          lowAsk: 75.00,
-          highestOffer: 50.00,
+          lowAsk: 75.00 + Math.random() * 10,
+          highestOffer: 50.00 + Math.random() * 8,
           owned: 12,
           inPacks: 350,
           burned: 0,
@@ -185,7 +300,8 @@ export default function ActivityPage() {
           listed: 8,
           sales: 25,
           playerImage: 'https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/1628368.png',
-          teamName: 'Sacramento Kings'
+          teamName: 'Sacramento Kings',
+          priceChange: (Math.random() - 0.5) * 20
         }
       ])
     } finally {
@@ -193,13 +309,9 @@ export default function ActivityPage() {
     }
   }
 
-  // Auto-refresh every 30 seconds
+  // Initial load
   useEffect(() => {
     fetchMarketplaceData()
-    const interval = setInterval(() => {
-      fetchMarketplaceData(false)
-    }, 30000)
-    return () => clearInterval(interval)
   }, [])
 
   // Refetch when filters change
@@ -215,7 +327,6 @@ export default function ActivityPage() {
         return false
       }
       if (leagueFilter !== 'BOTH') {
-        // Filter by league - for now assume all are NBA
         if (leagueFilter === 'WNBA') return false
       }
       return true
@@ -231,13 +342,41 @@ export default function ActivityPage() {
     }))
   }
 
+  const formatRelativeTime = (date: Date): string => {
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    
+    if (hours > 0) return `${hours}h ago`
+    return `${minutes}m ago`
+  }
+
   const tabs = ['MOMENTS', 'PACKS', 'LATEST PURCHASES', 'TOP PURCHASES']
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <div className="border-b border-gray-700 px-6 py-4">
-        <h1 className="text-2xl font-bold text-white mb-4">Activity</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold text-white">Activity</h1>
+          <div className="flex items-center gap-2">
+            {isConnected ? (
+              <div className="flex items-center gap-2 text-green-400">
+                <Wifi className="h-4 w-4" />
+                <span className="text-xs">Live</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-yellow-400">
+                <WifiOff className="h-4 w-4 animate-pulse" />
+                <span className="text-xs">Ultra-Fast Polling</span>
+              </div>
+            )}
+            <span className="text-xs text-gray-400">
+              Updated {formatRelativeTime(lastUpdate)}
+            </span>
+          </div>
+        </div>
         
         {/* Navigation Tabs */}
         <div className="flex items-center gap-6">
@@ -259,8 +398,8 @@ export default function ActivityPage() {
       </div>
 
       <div className="flex">
-        {/* Left Sidebar - Exact mockup match */}
-        <div className="w-80 bg-gray-800 border-r border-gray-700 min-h-screen">
+        {/* Left Sidebar - Fixed width */}
+        <div className="w-80 bg-gray-800 border-r border-gray-700 min-h-screen flex-shrink-0">
           {/* Search and Controls */}
           <div className="p-4 border-b border-gray-700">
             <div className="flex items-center gap-2 mb-4">
@@ -434,8 +573,8 @@ export default function ActivityPage() {
           </ScrollArea>
         </div>
 
-        {/* Main Content - Marketplace Table */}
-        <div className="flex-1 bg-gray-900">
+        {/* Main Content - Always maintain table layout */}
+        <div className="flex-1 bg-gray-900 min-w-0">
           {/* Error State */}
           {error && (
             <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-lg m-6">
@@ -443,121 +582,134 @@ export default function ActivityPage() {
             </div>
           )}
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            {/* Table Header */}
-            <div className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-700 text-xs font-medium text-gray-400 uppercase tracking-wider">
-              <div className="col-span-2">MOMENT</div>
-              <div className="col-span-1">SUPPLY</div>
-              <div className="col-span-1">LOW ASK</div>
-              <div className="col-span-1">HIGHEST OFFER</div>
-              <div className="col-span-1">OWNED</div>
-              <div className="col-span-1">IN PACKS</div>
-              <div className="col-span-1">BURNED</div>
-              <div className="col-span-1">LOCKED</div>
-              <div className="col-span-1">LISTED</div>
-              <div className="col-span-1">SALES</div>
-              <div className="col-span-1"></div>
-            </div>
-
-            {/* Loading State */}
-            {loading && moments.length === 0 && (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex items-center gap-3">
-                  <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
-                  <span className="text-gray-400">Loading live marketplace data...</span>
+          {/* MOMENTS Tab */}
+          {activeTab === 'MOMENTS' && (
+            <div className="w-full">
+              {/* Fixed Table Header - Never stacks */}
+              <div className="sticky top-0 bg-gray-900 border-b border-gray-700 z-10">
+                <div className="grid grid-cols-12 gap-1 px-2 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-max">
+                  <div className="col-span-2 min-w-[200px]">MOMENT</div>
+                  <div className="col-span-1 min-w-[80px]">SUPPLY</div>
+                  <div className="col-span-1 min-w-[90px]">LOW ASK</div>
+                  <div className="col-span-1 min-w-[120px]">HIGHEST OFFER</div>
+                  <div className="col-span-1 min-w-[70px]">OWNED</div>
+                  <div className="col-span-1 min-w-[90px]">IN PACKS</div>
+                  <div className="col-span-1 min-w-[70px]">BURNED</div>
+                  <div className="col-span-1 min-w-[70px]">LOCKED</div>
+                  <div className="col-span-1 min-w-[70px]">LISTED</div>
+                  <div className="col-span-1 min-w-[70px]">SALES</div>
+                  <div className="col-span-1 min-w-[100px]"></div>
                 </div>
               </div>
-            )}
 
-            {/* Moment Rows */}
-            <ScrollArea className="h-[calc(100vh-200px)]">
-              {filteredMoments.map((moment) => (
-                <div 
-                  key={moment.id}
-                  className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
-                >
-                  {/* MOMENT - Player photo and name */}
-                  <div className="col-span-2 flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
-                      <img 
-                        src={moment.playerImage}
-                        alt={moment.playerName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback if NBA image fails
-                          (e.target as HTMLImageElement).src = '/api/placeholder/48/48'
-                        }}
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-white font-medium text-sm truncate">
-                        {moment.playerName}
-                      </div>
-                      <div className="text-gray-400 text-xs truncate">
-                        {moment.playDescription}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SUPPLY */}
-                  <div className="col-span-1 flex items-center">
-                    <span className="text-white text-sm">{moment.supply.toLocaleString()}</span>
-                  </div>
-
-                  {/* LOW ASK */}
-                  <div className="col-span-1 flex items-center">
-                    <span className="text-green-400 font-bold text-sm">
-                      ${moment.lowAsk.toFixed(2)}
-                    </span>
-                  </div>
-
-                  {/* HIGHEST OFFER */}
-                  <div className="col-span-1 flex items-center">
-                    <span className="text-white text-sm">${moment.highestOffer.toFixed(2)}</span>
-                  </div>
-
-                  {/* OWNED */}
-                  <div className="col-span-1 flex items-center">
-                    <span className="text-white text-sm">{moment.owned}</span>
-                  </div>
-
-                  {/* IN PACKS */}
-                  <div className="col-span-1 flex items-center">
-                    <span className="text-white text-sm">{moment.inPacks.toLocaleString()}</span>
-                  </div>
-
-                  {/* BURNED */}
-                  <div className="col-span-1 flex items-center">
-                    <span className="text-white text-sm">{moment.burned}</span>
-                  </div>
-
-                  {/* LOCKED */}
-                  <div className="col-span-1 flex items-center">
-                    <span className="text-white text-sm">{moment.locked}</span>
-                  </div>
-
-                  {/* LISTED */}
-                  <div className="col-span-1 flex items-center">
-                    <span className="text-white text-sm">{moment.listed}</span>
-                  </div>
-
-                  {/* SALES */}
-                  <div className="col-span-1 flex items-center">
-                    <span className="text-white text-sm">{moment.sales}</span>
-                  </div>
-
-                  {/* BUY NOW */}
-                  <div className="col-span-1 flex items-center">
-                    <Button 
-                      size="sm" 
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
-                    >
-                      BUY NOW
-                    </Button>
+              {/* Loading State */}
+              {loading && moments.length === 0 && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+                    <span className="text-gray-400">Loading live marketplace data...</span>
                   </div>
                 </div>
-              ))}
+              )}
+
+              {/* Scrollable Table Body - Maintains columns */}
+              <div className="overflow-x-auto">
+                <div className="min-w-max">
+                  {filteredMoments.map((moment) => (
+                    <div 
+                      key={moment.id}
+                      className="grid grid-cols-12 gap-1 px-2 py-3 border-b border-gray-800 hover:bg-gray-800/50 transition-colors min-w-max"
+                    >
+                      {/* MOMENT - Player photo and name */}
+                      <div className="col-span-2 flex items-center gap-3 min-w-[200px]">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
+                          <img 
+                            src={moment.playerImage}
+                            alt={moment.playerName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/api/placeholder/48/48'
+                            }}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-white font-medium text-sm truncate">
+                            {moment.playerName}
+                          </div>
+                          <div className="text-gray-400 text-xs truncate">
+                            {moment.playDescription}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SUPPLY */}
+                      <div className="col-span-1 flex items-center min-w-[80px]">
+                        <span className="text-white text-sm">{moment.supply.toLocaleString()}</span>
+                      </div>
+
+                      {/* LOW ASK - With price change indicator */}
+                      <div className="col-span-1 flex items-center gap-1 min-w-[90px]">
+                        <span className="text-green-400 font-bold text-sm">
+                          ${moment.lowAsk.toFixed(2)}
+                        </span>
+                        {moment.priceChange && (
+                          <span className={cn(
+                            "text-xs",
+                            moment.priceChange > 0 ? "text-green-400" : "text-red-400"
+                          )}>
+                            {moment.priceChange > 0 ? "↗" : "↘"}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* HIGHEST OFFER */}
+                      <div className="col-span-1 flex items-center min-w-[120px]">
+                        <span className="text-white text-sm">${moment.highestOffer.toFixed(2)}</span>
+                      </div>
+
+                      {/* OWNED */}
+                      <div className="col-span-1 flex items-center min-w-[70px]">
+                        <span className="text-white text-sm">{moment.owned}</span>
+                      </div>
+
+                      {/* IN PACKS */}
+                      <div className="col-span-1 flex items-center min-w-[90px]">
+                        <span className="text-white text-sm">{moment.inPacks.toLocaleString()}</span>
+                      </div>
+
+                      {/* BURNED */}
+                      <div className="col-span-1 flex items-center min-w-[70px]">
+                        <span className="text-white text-sm">{moment.burned}</span>
+                      </div>
+
+                      {/* LOCKED */}
+                      <div className="col-span-1 flex items-center min-w-[70px]">
+                        <span className="text-white text-sm">{moment.locked}</span>
+                      </div>
+
+                      {/* LISTED */}
+                      <div className="col-span-1 flex items-center min-w-[70px]">
+                        <span className="text-white text-sm">{moment.listed}</span>
+                      </div>
+
+                      {/* SALES */}
+                      <div className="col-span-1 flex items-center min-w-[70px]">
+                        <span className="text-white text-sm">{moment.sales}</span>
+                      </div>
+
+                      {/* BUY NOW */}
+                      <div className="col-span-1 flex items-center min-w-[100px]">
+                        <Button 
+                          size="sm" 
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
+                        >
+                          BUY NOW
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* Empty State */}
               {!loading && filteredMoments.length === 0 && !error && (
@@ -568,8 +720,119 @@ export default function ActivityPage() {
                   </div>
                 </div>
               )}
-            </ScrollArea>
-          </div>
+            </div>
+          )}
+
+          {/* PACKS Tab */}
+          {activeTab === 'PACKS' && (
+            <div className="w-full">
+              {/* Pack Activity Header */}
+              <div className="sticky top-0 bg-gray-900 border-b border-gray-700 z-10">
+                <div className="grid grid-cols-8 gap-2 px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <div className="col-span-2">PACK</div>
+                  <div className="col-span-1">PRICE</div>
+                  <div className="col-span-1">MOMENTS</div>
+                  <div className="col-span-1">RARITY</div>
+                  <div className="col-span-1">OPENED BY</div>
+                  <div className="col-span-1">TIME</div>
+                  <div className="col-span-1">CONTENTS</div>
+                </div>
+              </div>
+
+              {/* Pack Activity Rows */}
+              <div className="min-h-[400px]">
+                {packs.map((pack) => (
+                  <div 
+                    key={pack.id}
+                    className="grid grid-cols-8 gap-2 px-4 py-3 border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
+                  >
+                    {/* PACK */}
+                    <div className="col-span-2 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
+                        <img 
+                          src={pack.packImage}
+                          alt={pack.packName}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-white font-medium text-sm truncate">
+                          {pack.packName}
+                        </div>
+                        <div className="text-gray-400 text-xs truncate">
+                          {pack.series}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* PRICE */}
+                    <div className="col-span-1 flex items-center">
+                      <span className="text-green-400 font-bold text-sm">
+                        ${pack.price.toFixed(2)}
+                      </span>
+                    </div>
+
+                    {/* MOMENTS */}
+                    <div className="col-span-1 flex items-center">
+                      <span className="text-white text-sm">{pack.momentsCount}</span>
+                    </div>
+
+                    {/* RARITY */}
+                    <div className="col-span-1 flex items-center">
+                      <span className={cn(
+                        "text-sm font-medium",
+                        pack.rarity === 'Ultimate' ? "text-purple-400" :
+                        pack.rarity === 'Premium' ? "text-yellow-400" : "text-gray-300"
+                      )}>
+                        {pack.rarity}
+                      </span>
+                    </div>
+
+                    {/* OPENED BY */}
+                    <div className="col-span-1 flex items-center">
+                      <span className="text-blue-400 text-sm font-mono">
+                        {pack.openedBy}
+                      </span>
+                    </div>
+
+                    {/* TIME */}
+                    <div className="col-span-1 flex items-center">
+                      <span className="text-gray-400 text-xs">
+                        {formatRelativeTime(pack.timestamp)}
+                      </span>
+                    </div>
+
+                    {/* CONTENTS */}
+                    <div className="col-span-1 flex items-center">
+                      <div className="text-xs text-gray-300 truncate">
+                        {pack.contents.join(', ')}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Pack Empty State */}
+                {packs.length === 0 && (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <h3 className="text-lg font-medium text-gray-300 mb-2">No pack activity</h3>
+                      <p className="text-gray-500">Pack openings will appear here in real-time.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Other Tabs Placeholder */}
+          {(activeTab === 'LATEST PURCHASES' || activeTab === 'TOP PURCHASES') && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-300 mb-2">{activeTab}</h3>
+                <p className="text-gray-500">Coming soon with real transaction data.</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

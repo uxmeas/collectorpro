@@ -227,14 +227,25 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Add some randomization to simulate live data
-    filteredMoments = filteredMoments.map(moment => ({
-      ...moment,
-      lowAsk: moment.lowAsk + (Math.random() - 0.5) * 2, // ±$1 variation
-      highestOffer: moment.highestOffer + (Math.random() - 0.5) * 1, // ±$0.50 variation
-      listed: moment.listed + Math.floor((Math.random() - 0.5) * 4), // ±2 variation
-      sales: moment.sales + Math.floor(Math.random() * 3) // 0-2 new sales
-    }))
+    // Add live market simulation - prices change every call
+    filteredMoments = filteredMoments.map(moment => {
+      const priceVolatility = moment.rarity === 'Ultimate' ? 0.05 : 
+                              moment.rarity === 'Legendary' ? 0.03 : 
+                              moment.rarity === 'Rare' ? 0.02 : 0.01
+      
+      const newLowAsk = moment.lowAsk * (1 + (Math.random() - 0.5) * priceVolatility)
+      const newHighestOffer = moment.highestOffer * (1 + (Math.random() - 0.5) * priceVolatility)
+      
+      return {
+        ...moment,
+        lowAsk: Math.max(0.01, newLowAsk), // Prevent negative prices
+        highestOffer: Math.max(0.01, newHighestOffer),
+        listed: Math.max(0, moment.listed + Math.floor((Math.random() - 0.5) * 6)), // ±3 variation
+        sales: moment.sales + Math.floor(Math.random() * 2), // 0-1 new sales
+        priceChange: ((newLowAsk - moment.lowAsk) / moment.lowAsk) * 100, // Percentage change
+        lastUpdate: new Date().toISOString()
+      }
+    })
     
     // Limit results
     filteredMoments = filteredMoments.slice(0, limit)
