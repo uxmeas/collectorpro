@@ -18,43 +18,13 @@ import {
   WifiOff
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-interface NBATopShotMoment {
-  id: string
-  playerName: string
-  playDescription: string
-  setName: string
-  series: string
-  rarity: 'Common' | 'Rare' | 'Legendary' | 'Ultimate'
-  circulation: number
-  serialNumber: number
-  supply: number
-  lowAsk: number
-  highestOffer: number
-  owned: number
-  inPacks: number
-  burned: number
-  locked: number
-  listed: number
-  sales: number
-  playerImage: string
-  teamName: string
-  lastSalePrice?: number
-  priceChange?: number
-}
-
-interface PackActivity {
-  id: string
-  packName: string
-  series: string
-  price: number
-  momentsCount: number
-  rarity: 'Standard' | 'Premium' | 'Ultimate'
-  openedBy: string
-  timestamp: Date
-  contents: string[]
-  packImage: string
-}
+import { UnifiedTable } from '@/components/table/UnifiedTable'
+import { 
+  activityTableColumns, 
+  packActivityColumns,
+  type NBATopShotMoment,
+  type PackActivity 
+} from '@/components/table/configs/ActivityTableConfig'
 
 interface FilterSectionProps {
   title: string
@@ -305,24 +275,24 @@ export default function ActivityPage() {
         },
         {
           id: '3',
-          playerName: 'DEAARON FOX', 
-          playDescription: 'Kings 2024',
+          playerName: 'VICTOR WEMBANYAMA', 
+          playDescription: 'Spurs 2024',
           setName: 'Series 2024-25',
           series: 'Series 2024-25', 
-          rarity: 'Legendary',
-          circulation: 500,
-          serialNumber: 91,
-          supply: 500,
-          lowAsk: 75.00 + Math.random() * 10,
-          highestOffer: 50.00 + Math.random() * 8,
-          owned: 12,
-          inPacks: 350,
+          rarity: 'Ultimate',
+          circulation: 99,
+          serialNumber: 23,
+          supply: 99,
+          lowAsk: 500.00 + Math.random() * 10,
+          highestOffer: 400.00 + Math.random() * 8,
+          owned: 3,
+          inPacks: 65,
           burned: 0,
-          locked: 15,
-          listed: 8,
-          sales: 25,
-          playerImage: 'https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/1628368.png',
-          teamName: 'Sacramento Kings',
+          locked: 25,
+          listed: 2,
+          sales: 45,
+          playerImage: 'https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/1641705.png',
+          teamName: 'San Antonio Spurs',
           priceChange: (Math.random() - 0.5) * 20
         }
       ])
@@ -596,7 +566,7 @@ export default function ActivityPage() {
           </ScrollArea>
         </div>
 
-        {/* Main Content - Always maintain table layout */}
+        {/* Main Content - TanStack Table v8 */}
         <div className="flex-1 bg-gray-900 min-w-0">
           {/* Error State */}
           {error && (
@@ -605,306 +575,39 @@ export default function ActivityPage() {
             </div>
           )}
 
-          {/* MOMENTS Tab */}
+          {/* MOMENTS Tab - TanStack Table v8 */}
           {activeTab === 'MOMENTS' && (
-            <div className="w-full">
-              {/* Loading State */}
-              {loading && moments.length === 0 && (
-                <div className="flex items-center justify-center py-12">
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
-                    <span className="text-gray-400">Loading live marketplace data...</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Proper HTML Table - Never stacks */}
-              {!loading || moments.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1200px] border-collapse table-fixed">
-                    {/* Table Header */}
-                    <thead className="sticky top-0 bg-gray-900 border-b border-gray-700 z-10">
-                      <tr>
-                        <th className="text-left py-3 px-4 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[250px]">
-                          MOMENT
-                        </th>
-                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
-                          SUPPLY
-                        </th>
-                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
-                          LOW ASK
-                        </th>
-                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[120px]">
-                          HIGHEST OFFER
-                        </th>
-                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
-                          OWNED
-                        </th>
-                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
-                          IN PACKS
-                        </th>
-                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
-                          BURNED
-                        </th>
-                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
-                          LOCKED
-                        </th>
-                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
-                          LISTED
-                        </th>
-                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
-                          SALES
-                        </th>
-                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[120px]">
-                          ACTION
-                        </th>
-                      </tr>
-                    </thead>
-
-                    {/* Table Body */}
-                    <tbody>
-                      {filteredMoments.map((moment) => (
-                        <tr 
-                          key={moment.id}
-                          className={cn(
-                            "border-b border-gray-800 hover:bg-gray-800/50 transition-all duration-1000",
-                            flashUpdates[moment.id] && "bg-green-500/20 animate-pulse"
-                          )}
-                        >
-                          {/* MOMENT - Player photo and name */}
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
-                                <img 
-                                  src={moment.playerImage}
-                                  alt={moment.playerName}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = '/api/placeholder/48/48'
-                                  }}
-                                />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="text-white font-medium text-sm">
-                                  {moment.playerName}
-                                </div>
-                                <div className="text-gray-400 text-xs">
-                                  {moment.playDescription}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* SUPPLY */}
-                          <td className="py-3 px-2">
-                            <span className="text-white text-sm">{moment.supply.toLocaleString()}</span>
-                          </td>
-
-                          {/* LOW ASK - With price change indicator */}
-                          <td className="py-3 px-2">
-                            <div className="flex items-center gap-1">
-                              <span className={cn(
-                                "font-bold text-sm transition-all duration-500",
-                                flashUpdates[moment.id] ? "text-yellow-400" : "text-green-400"
-                              )}>
-                                ${moment.lowAsk.toFixed(2)}
-                              </span>
-                              {flashUpdates[moment.id] && (
-                                <span className="text-yellow-400 animate-bounce text-xs">●</span>
-                              )}
-                              {moment.priceChange && (
-                                <span className={cn(
-                                  "text-xs",
-                                  moment.priceChange > 0 ? "text-green-400" : "text-red-400"
-                                )}>
-                                  {moment.priceChange > 0 ? "↗" : "↘"}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* HIGHEST OFFER */}
-                          <td className="py-3 px-2">
-                            <span className="text-white text-sm">${moment.highestOffer.toFixed(2)}</span>
-                          </td>
-
-                          {/* OWNED */}
-                          <td className="py-3 px-2">
-                            <span className="text-white text-sm">{moment.owned}</span>
-                          </td>
-
-                          {/* IN PACKS */}
-                          <td className="py-3 px-2">
-                            <span className="text-white text-sm">{moment.inPacks.toLocaleString()}</span>
-                          </td>
-
-                          {/* BURNED */}
-                          <td className="py-3 px-2">
-                            <span className="text-white text-sm">{moment.burned}</span>
-                          </td>
-
-                          {/* LOCKED */}
-                          <td className="py-3 px-2">
-                            <span className="text-white text-sm">{moment.locked}</span>
-                          </td>
-
-                          {/* LISTED */}
-                          <td className="py-3 px-2">
-                            <span className="text-white text-sm">{moment.listed}</span>
-                          </td>
-
-                          {/* SALES */}
-                          <td className="py-3 px-2">
-                            <span className="text-white text-sm">{moment.sales}</span>
-                          </td>
-
-                          {/* BUY NOW */}
-                          <td className="py-3 px-2">
-                            <Button 
-                              size="sm" 
-                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
-                            >
-                              BUY NOW
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
-
-              {/* Empty State */}
-              {!loading && filteredMoments.length === 0 && !error && (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <h3 className="text-lg font-medium text-gray-300 mb-2">No moments found</h3>
-                    <p className="text-gray-500">Try adjusting your filters or search terms.</p>
-                  </div>
-                </div>
-              )}
+            <div className="w-full p-6">
+              <UnifiedTable
+                columns={activityTableColumns}
+                data={filteredMoments}
+                enableSorting={true}
+                enableFiltering={false} // We have custom filters
+                enablePagination={false}
+                enableVirtualization={true}
+                defaultViewMode={{ mode: 'table' }}
+                searchPlaceholder="Search moments..."
+                emptyStateMessage="No moments found. Try adjusting your filters."
+                loadingMessage="Loading live marketplace data..."
+              />
             </div>
           )}
 
-          {/* PACKS Tab */}
+          {/* PACKS Tab - TanStack Table v8 */}
           {activeTab === 'PACKS' && (
-            <div className="w-full">
-              {/* Proper HTML Table for Packs */}
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1000px] border-collapse">
-                  {/* Pack Activity Header */}
-                  <thead className="sticky top-0 bg-gray-900 border-b border-gray-700 z-10">
-                    <tr>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[250px]">
-                        PACK
-                      </th>
-                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
-                        PRICE
-                      </th>
-                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
-                        MOMENTS
-                      </th>
-                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
-                        RARITY
-                      </th>
-                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[120px]">
-                        OPENED BY
-                      </th>
-                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
-                        TIME
-                      </th>
-                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[200px]">
-                        CONTENTS
-                      </th>
-                    </tr>
-                  </thead>
-
-                  {/* Pack Activity Rows */}
-                  <tbody>
-                    {packs.map((pack) => (
-                      <tr 
-                        key={pack.id}
-                        className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
-                      >
-                        {/* PACK */}
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
-                              <img 
-                                src={pack.packImage}
-                                alt={pack.packName}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="text-white font-medium text-sm">
-                                {pack.packName}
-                              </div>
-                              <div className="text-gray-400 text-xs">
-                                {pack.series}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* PRICE */}
-                        <td className="py-3 px-2">
-                          <span className="text-green-400 font-bold text-sm">
-                            ${pack.price.toFixed(2)}
-                          </span>
-                        </td>
-
-                        {/* MOMENTS */}
-                        <td className="py-3 px-2">
-                          <span className="text-white text-sm">{pack.momentsCount}</span>
-                        </td>
-
-                        {/* RARITY */}
-                        <td className="py-3 px-2">
-                          <span className={cn(
-                            "text-sm font-medium",
-                            pack.rarity === 'Ultimate' ? "text-purple-400" :
-                            pack.rarity === 'Premium' ? "text-yellow-400" : "text-gray-300"
-                          )}>
-                            {pack.rarity}
-                          </span>
-                        </td>
-
-                        {/* OPENED BY */}
-                        <td className="py-3 px-2">
-                          <span className="text-blue-400 text-sm font-mono">
-                            {pack.openedBy}
-                          </span>
-                        </td>
-
-                        {/* TIME */}
-                        <td className="py-3 px-2">
-                          <span className="text-gray-400 text-xs">
-                            {formatRelativeTime(pack.timestamp)}
-                          </span>
-                        </td>
-
-                        {/* CONTENTS */}
-                        <td className="py-3 px-2">
-                          <div className="text-xs text-gray-300">
-                            {pack.contents.join(', ')}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pack Empty State */}
-              {packs.length === 0 && (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <h3 className="text-lg font-medium text-gray-300 mb-2">No pack activity</h3>
-                    <p className="text-gray-500">Pack openings will appear here in real-time.</p>
-                  </div>
-                </div>
-              )}
+            <div className="w-full p-6">
+              <UnifiedTable
+                columns={packActivityColumns}
+                data={packs}
+                enableSorting={true}
+                enableFiltering={false}
+                enablePagination={false}
+                enableVirtualization={true}
+                defaultViewMode={{ mode: 'table' }}
+                searchPlaceholder="Search pack activity..."
+                emptyStateMessage="No pack activity. Pack openings will appear here in real-time."
+                loadingMessage="Loading pack activity..."
+              />
             </div>
           )}
 
