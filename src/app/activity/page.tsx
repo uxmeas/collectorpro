@@ -1,8 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Card, CardContent } from "@/components/ui/Card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Label } from "@/components/ui/label"
@@ -11,20 +9,16 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { 
   ChevronDown, 
   ChevronUp, 
-  X, 
+  Search,
   RefreshCw,
   Loader2,
-  ExternalLink
+  Grid,
+  List
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// NBA Top Shot Activity Types
-type ActivityEvent = 'Sale' | 'Mint' | 'Transfer' | 'Pack Opening' | 'Listing' | 'Delisting'
-
-interface NBATopShotActivity {
+interface NBATopShotMoment {
   id: string
-  type: ActivityEvent
-  momentId: string
   playerName: string
   playDescription: string
   setName: string
@@ -32,59 +26,19 @@ interface NBATopShotActivity {
   rarity: 'Common' | 'Rare' | 'Legendary' | 'Ultimate'
   circulation: number
   serialNumber: number
-  price?: {
-    usd: number
-    flow: number
-  }
-  from: string
-  to: string
-  timestamp: Date
-  transactionHash: string
-  blockHeight?: number
-  thumbnail?: string
-  metadata?: {
-    teamName?: string
-    gameDate?: string
-    playCategory?: string
-    videoUrl?: string
-  }
+  supply: number
+  lowAsk: number
+  highestOffer: number
+  owned: number
+  inPacks: number
+  burned: number
+  locked: number
+  listed: number
+  sales: number
+  playerImage: string
+  teamName: string
+  lastSalePrice?: number
 }
-
-interface ActivityMetrics {
-  totalTransactions: number
-  totalVolume: { usd: number; flow: number }
-  averagePrice: { usd: number; flow: number }
-  uniqueTraders: number
-  topPlayer: string
-  topSet: string
-  priceChange24h: number
-  volumeChange24h: number
-}
-
-// Utility functions
-const formatRelativeTime = (date: Date): string => {
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-  
-  if (days > 0) {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: '2-digit',
-      hour: 'numeric',
-      minute: '2-digit'
-    }).replace(',', ' ')
-  }
-  if (hours > 0) return `${hours}h ago`
-  return `${minutes}m ago`
-}
-
-const formatPrice = (price: { usd: number; flow: number }) => 
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price.usd)
 
 interface FilterSectionProps {
   title: string
@@ -92,65 +46,64 @@ interface FilterSectionProps {
   defaultOpen?: boolean
 }
 
-const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultOpen = true }) => {
+const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen)
   
   return (
-    <div className="border-b border-gray-700 pb-4 mb-4">
+    <div className="border-b border-gray-700 pb-3 mb-3">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full text-left text-sm font-medium text-gray-300 hover:text-white transition-colors"
+        className="flex items-center justify-between w-full text-left text-xs font-medium text-gray-300 hover:text-white transition-colors py-2"
       >
         {title}
-        {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        {isOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
       </button>
-      {isOpen && <div className="mt-3">{children}</div>}
+      {isOpen && <div className="mt-2">{children}</div>}
     </div>
   )
 }
 
 export default function ActivityPage() {
-  const [activities, setActivities] = useState<NBATopShotActivity[]>([])
-  const [metrics, setMetrics] = useState<ActivityMetrics | null>(null)
+  const [moments, setMoments] = useState<NBATopShotMoment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   
-  const [filters, setFilters] = useState({
-    status: [] as string[],
-    priceRange: { min: '', max: '' },
-    sets: [] as string[]
-  })
   const [searchTerm, setSearchTerm] = useState('')
-  const [activeTab, setActiveTab] = useState('LATEST PURCHASES')
+  const [leagueFilter, setLeagueFilter] = useState<'NBA' | 'WNBA' | 'BOTH'>('BOTH')
+  const [activeTab, setActiveTab] = useState('MOMENTS')
+  const [releaseDate, setReleaseDate] = useState('Latest')
+  
+  const [filters, setFilters] = useState({
+    players: [] as string[],
+    teams: [] as string[],
+    sets: [] as string[],
+    setNames: [] as string[],
+    series: [] as string[],
+    tier: [] as string[]
+  })
 
-  // Fetch real NBA TopShot activity data
-  const fetchActivityData = async (showLoading = true) => {
+  // Fetch real NBA TopShot marketplace data
+  const fetchMarketplaceData = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true)
       setError(null)
 
-      const params = new URLSearchParams()
+      console.log('🔄 Fetching live NBA TopShot marketplace data...')
       
-      if (filters.status.length > 0) {
-        params.append('eventTypes', filters.status.join(','))
-      }
-      if (filters.priceRange.min) {
-        params.append('minPrice', filters.priceRange.min)
-      }
-      if (filters.priceRange.max) {
-        params.append('maxPrice', filters.priceRange.max)
-      }
-      if (filters.sets.length > 0) {
-        params.append('sets', filters.sets.join(','))
-      }
-      
-      params.append('limit', '100')
-      params.append('offset', '0')
-
-      console.log('🔄 Fetching real NBA TopShot activity data...')
-      
-      const response = await fetch(`/api/activity?${params.toString()}`)
+      // This would call the real NBA TopShot marketplace API
+      const response = await fetch('/api/flow/marketplace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filters: {
+            searchTerm,
+            league: leagueFilter,
+            ...filters
+          },
+          limit: 50
+        })
+      })
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -159,57 +112,115 @@ export default function ActivityPage() {
       const data = await response.json()
       
       if (data.success) {
-        const transformedActivities = data.data.transactions.map((tx: any) => ({
-          ...tx,
-          timestamp: new Date(tx.timestamp)
-        }))
-        
-        setActivities(transformedActivities)
-        setMetrics(data.data.metrics)
+        setMoments(data.data.moments || [])
         setLastUpdate(new Date())
-        
-        console.log(`✅ Loaded ${transformedActivities.length} real NBA TopShot transactions`)
+        console.log(`✅ Loaded ${data.data.moments?.length || 0} live marketplace moments`)
       } else {
-        throw new Error(data.message || 'Failed to fetch activity data')
+        throw new Error(data.message || 'Failed to fetch marketplace data')
       }
     } catch (err) {
-      console.error('❌ Error fetching activity data:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load activity data')
-      setActivities([])
-      setMetrics(null)
+      console.error('❌ Error fetching marketplace data:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load marketplace data')
+      
+      // Fallback demo data that matches the mockup
+      setMoments([
+        {
+          id: '1',
+          playerName: 'SHAI GILGEOUS-ALEXANDER',
+          playDescription: 'Thunder 2024',
+          setName: 'Series 2024-25',
+          series: 'Series 2024-25',
+          rarity: 'Common',
+          circulation: 3000,
+          serialNumber: 1234,
+          supply: 3000,
+          lowAsk: 8.00,
+          highestOffer: 1.00,
+          owned: 65,
+          inPacks: 2035,
+          burned: 0,
+          locked: 4,
+          listed: 3,
+          sales: 8,
+          playerImage: 'https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/1628983.png',
+          teamName: 'Oklahoma City Thunder'
+        },
+        {
+          id: '2', 
+          playerName: 'GIANNIS ANTETOKOUNMPO',
+          playDescription: 'Bucks 2024',
+          setName: 'Series 2024-25',
+          series: 'Series 2024-25',
+          rarity: 'Rare',
+          circulation: 1500,
+          serialNumber: 5678,
+          supply: 1500,
+          lowAsk: 25.00,
+          highestOffer: 15.00,
+          owned: 32,
+          inPacks: 1200,
+          burned: 0,
+          locked: 8,
+          listed: 5,
+          sales: 15,
+          playerImage: 'https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/203507.png',
+          teamName: 'Milwaukee Bucks'
+        },
+        {
+          id: '3',
+          playerName: 'DEAARON FOX', 
+          playDescription: 'Kings 2024',
+          setName: 'Series 2024-25',
+          series: 'Series 2024-25', 
+          rarity: 'Legendary',
+          circulation: 500,
+          serialNumber: 91,
+          supply: 500,
+          lowAsk: 75.00,
+          highestOffer: 50.00,
+          owned: 12,
+          inPacks: 350,
+          burned: 0,
+          locked: 15,
+          listed: 8,
+          sales: 25,
+          playerImage: 'https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/1628368.png',
+          teamName: 'Sacramento Kings'
+        }
+      ])
     } finally {
       setLoading(false)
     }
   }
 
+  // Auto-refresh every 30 seconds
   useEffect(() => {
-    fetchActivityData()
+    fetchMarketplaceData()
     const interval = setInterval(() => {
-      fetchActivityData(false)
+      fetchMarketplaceData(false)
     }, 30000)
     return () => clearInterval(interval)
   }, [])
 
+  // Refetch when filters change
   useEffect(() => {
     if (!loading) {
-      fetchActivityData()
+      fetchMarketplaceData()
     }
-  }, [filters])
+  }, [filters, searchTerm, leagueFilter])
 
-  const filteredActivities = useMemo(() => {
-    return activities.filter(activity => {
-      if (filters.status.length > 0 && !filters.status.includes(activity.type)) {
+  const filteredMoments = useMemo(() => {
+    return moments.filter(moment => {
+      if (searchTerm && !moment.playerName.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false
       }
-      
-      if (searchTerm && !activity.playerName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !activity.playDescription.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false
+      if (leagueFilter !== 'BOTH') {
+        // Filter by league - for now assume all are NBA
+        if (leagueFilter === 'WNBA') return false
       }
-      
       return true
     })
-  }, [activities, filters, searchTerm])
+  }, [moments, searchTerm, leagueFilter])
 
   const handleFilterChange = (category: string, value: string, checked: boolean) => {
     setFilters(prev => ({
@@ -220,19 +231,22 @@ export default function ActivityPage() {
     }))
   }
 
-  const tabs = ['EXPLORE', 'MOMENTS', 'PACKS', 'LATEST PURCHASES', 'TOP PURCHASES', 'VIP NFTS']
+  const tabs = ['MOMENTS', 'PACKS', 'LATEST PURCHASES', 'TOP PURCHASES']
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* NBA TopShot Header Navigation */}
-      <div className="border-b border-gray-700">
-        <div className="flex items-center gap-8 px-6 py-4">
+      {/* Header */}
+      <div className="border-b border-gray-700 px-6 py-4">
+        <h1 className="text-2xl font-bold text-white mb-4">Activity</h1>
+        
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-6">
           {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "text-sm font-medium transition-colors pb-4 border-b-2",
+                "text-sm font-medium transition-colors pb-2 border-b-2",
                 activeTab === tab 
                   ? "text-white border-blue-500" 
                   : "text-gray-400 hover:text-gray-300 border-transparent"
@@ -245,77 +259,106 @@ export default function ActivityPage() {
       </div>
 
       <div className="flex">
-        {/* Left Sidebar - Filters */}
-        <div className="w-80 bg-gray-800 border-r border-gray-700 min-h-screen p-6">
-          <div className="mb-6">
-            <h2 className="text-lg font-bold mb-2 text-white">Filters</h2>
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Search moments..."
-                value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
-              />
+        {/* Left Sidebar - Exact mockup match */}
+        <div className="w-80 bg-gray-800 border-r border-gray-700 min-h-screen">
+          {/* Search and Controls */}
+          <div className="p-4 border-b border-gray-700">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search by players, teams, and sets"
+                  value={searchTerm}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
+                />
+              </div>
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => fetchActivityData()}
+                onClick={() => fetchMarketplaceData()}
                 disabled={loading}
                 className="border-gray-600 text-gray-300 hover:bg-gray-700"
               >
                 <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
               </Button>
             </div>
+            
+            {/* League Filter */}
+            <div className="flex gap-2">
+              {(['NBA', 'WNBA', 'BOTH'] as const).map((league) => (
+                <button
+                  key={league}
+                  onClick={() => setLeagueFilter(league)}
+                  className={cn(
+                    "px-3 py-1 text-xs font-medium rounded transition-colors",
+                    leagueFilter === league
+                      ? "bg-white text-gray-900"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  )}
+                >
+                  {league}
+                </button>
+              ))}
+            </div>
+            
+            {/* Release Date */}
+            <div className="mt-4">
+              <select 
+                value={releaseDate}
+                onChange={(e) => setReleaseDate(e.target.value)}
+                className="w-full bg-gray-700 border-gray-600 text-white text-sm rounded px-3 py-2"
+              >
+                <option value="Latest">Release Date: Latest</option>
+                <option value="This Week">This Week</option>
+                <option value="This Month">This Month</option>
+              </select>
+            </div>
           </div>
 
-          <ScrollArea className="h-[calc(100vh-200px)]">
-            <FilterSection title="Transaction Type">
-              <div className="space-y-3">
-                {['Sale', 'Mint', 'Transfer', 'Pack Opening'].map(status => (
-                  <div key={status} className="flex items-center space-x-2">
+          {/* Filters */}
+          <ScrollArea className="h-[calc(100vh-250px)] p-4">
+            <FilterSection title="PLAYERS">
+              <div className="space-y-2">
+                {['LeBron James', 'Stephen Curry', 'Giannis Antetokounmpo', 'Luka Doncic'].map(player => (
+                  <div key={player} className="flex items-center space-x-2">
                     <Checkbox
-                      id={status}
-                      checked={filters.status.includes(status)}
+                      id={player}
+                      checked={filters.players.includes(player)}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                        handleFilterChange('status', status, e.target.checked)
+                        handleFilterChange('players', player, e.target.checked)
                       }
                     />
-                    <Label htmlFor={status} className="text-sm text-gray-300 cursor-pointer">
-                      {status}
+                    <Label htmlFor={player} className="text-xs text-gray-300 cursor-pointer">
+                      {player}
                     </Label>
                   </div>
                 ))}
               </div>
             </FilterSection>
 
-            <FilterSection title="Price Range">
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Min USD"
-                    value={filters.priceRange.min}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters(prev => ({
-                      ...prev,
-                      priceRange: { ...prev.priceRange, min: e.target.value }
-                    }))}
-                    className="bg-gray-700 border-gray-600 text-white"
-                  />
-                  <Input
-                    placeholder="Max USD"
-                    value={filters.priceRange.max}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters(prev => ({
-                      ...prev,
-                      priceRange: { ...prev.priceRange, max: e.target.value }
-                    }))}
-                    className="bg-gray-700 border-gray-600 text-white"
-                  />
-                </div>
+            <FilterSection title="TEAMS">
+              <div className="space-y-2">
+                {['Lakers', 'Warriors', 'Bucks', 'Mavericks'].map(team => (
+                  <div key={team} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={team}
+                      checked={filters.teams.includes(team)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleFilterChange('teams', team, e.target.checked)
+                      }
+                    />
+                    <Label htmlFor={team} className="text-xs text-gray-300 cursor-pointer">
+                      {team}
+                    </Label>
+                  </div>
+                ))}
               </div>
             </FilterSection>
 
-            <FilterSection title="Sets">
-              <div className="space-y-3">
-                {['Base Set', 'Rare', 'Legendary', 'Championship', 'Playoffs', 'All-Star'].map(set => (
+            <FilterSection title="SETS">
+              <div className="space-y-2">
+                {['Base Set', 'Rare', 'Legendary'].map(set => (
                   <div key={set} className="flex items-center space-x-2">
                     <Checkbox
                       id={set}
@@ -324,8 +367,65 @@ export default function ActivityPage() {
                         handleFilterChange('sets', set, e.target.checked)
                       }
                     />
-                    <Label htmlFor={set} className="text-sm text-gray-300 cursor-pointer">
+                    <Label htmlFor={set} className="text-xs text-gray-300 cursor-pointer">
                       {set}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </FilterSection>
+
+            <FilterSection title="SET NAMES">
+              <div className="space-y-2">
+                {['2023 NBA PLAYOFFS ROUND', '2024 NBA PLAYOFFS'].map(setName => (
+                  <div key={setName} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={setName}
+                      checked={filters.setNames.includes(setName)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleFilterChange('setNames', setName, e.target.checked)
+                      }
+                    />
+                    <Label htmlFor={setName} className="text-xs text-gray-300 cursor-pointer">
+                      {setName}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </FilterSection>
+
+            <FilterSection title="SERIES">
+              <div className="space-y-2">
+                {['Series 2024-25', 'Series 2023-24'].map(series => (
+                  <div key={series} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={series}
+                      checked={filters.series.includes(series)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleFilterChange('series', series, e.target.checked)
+                      }
+                    />
+                    <Label htmlFor={series} className="text-xs text-gray-300 cursor-pointer">
+                      {series}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </FilterSection>
+
+            <FilterSection title="TIER">
+              <div className="space-y-2">
+                {['Common', 'Fandom', 'Rare', 'Legendary', 'Ultimate'].map(tier => (
+                  <div key={tier} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={tier}
+                      checked={filters.tier.includes(tier)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleFilterChange('tier', tier, e.target.checked)
+                      }
+                    />
+                    <Label htmlFor={tier} className="text-xs text-gray-300 cursor-pointer">
+                      {tier}
                     </Label>
                   </div>
                 ))}
@@ -334,147 +434,137 @@ export default function ActivityPage() {
           </ScrollArea>
         </div>
 
-        {/* Main Content - Exact NBA TopShot Table */}
+        {/* Main Content - Marketplace Table */}
         <div className="flex-1 bg-gray-900">
           {/* Error State */}
           {error && (
             <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-lg m-6">
-              <div className="flex items-center gap-2">
-                <X className="h-4 w-4 text-red-400" />
-                <span className="text-red-400 text-sm">Error loading data: {error}</span>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => fetchActivityData()}
-                  className="ml-auto text-red-400 hover:text-red-300"
-                >
-                  Retry
-                </Button>
-              </div>
+              <span className="text-red-400 text-sm">Error loading data: {error}</span>
             </div>
           )}
 
-          {/* NBA TopShot Transactions Table */}
+          {/* Table */}
           <div className="overflow-x-auto">
-            {/* Table Header - Exact NBA TopShot Style */}
-            <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-700 text-xs font-medium text-gray-400 uppercase tracking-wider">
+            {/* Table Header */}
+            <div className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-700 text-xs font-medium text-gray-400 uppercase tracking-wider">
               <div className="col-span-2">MOMENT</div>
-              <div className="col-span-1">PRICE</div>
-              <div className="col-span-2">SERIAL</div>
-              <div className="col-span-1">PARALLEL</div>
-              <div className="col-span-2">SET</div>
-              <div className="col-span-1">SERIES</div>
-              <div className="col-span-1">BUYER</div>
-              <div className="col-span-1">SELLER</div>
-              <div className="col-span-1">DATE/TIME</div>
-              <div className="col-span-1">TX</div>
+              <div className="col-span-1">SUPPLY</div>
+              <div className="col-span-1">LOW ASK</div>
+              <div className="col-span-1">HIGHEST OFFER</div>
+              <div className="col-span-1">OWNED</div>
+              <div className="col-span-1">IN PACKS</div>
+              <div className="col-span-1">BURNED</div>
+              <div className="col-span-1">LOCKED</div>
+              <div className="col-span-1">LISTED</div>
+              <div className="col-span-1">SALES</div>
+              <div className="col-span-1"></div>
             </div>
 
             {/* Loading State */}
-            {loading && activities.length === 0 && (
+            {loading && moments.length === 0 && (
               <div className="flex items-center justify-center py-12">
                 <div className="flex items-center gap-3">
                   <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
-                  <span className="text-gray-400">Loading NBA TopShot transactions...</span>
+                  <span className="text-gray-400">Loading live marketplace data...</span>
                 </div>
               </div>
             )}
 
-            {/* Transaction Rows - Exact NBA TopShot Style */}
+            {/* Moment Rows */}
             <ScrollArea className="h-[calc(100vh-200px)]">
-              {filteredActivities.map((activity, index) => (
+              {filteredMoments.map((moment) => (
                 <div 
-                  key={`${activity.id}-${index}`}
-                  className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
+                  key={moment.id}
+                  className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
                 >
-                  {/* MOMENT - Small thumbnail + player name */}
+                  {/* MOMENT - Player photo and name */}
                   <div className="col-span-2 flex items-center gap-3">
                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
                       <img 
-                        src={activity.thumbnail || '/api/placeholder/48/48'} 
-                        alt={activity.playerName}
+                        src={moment.playerImage}
+                        alt={moment.playerName}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback if NBA image fails
+                          (e.target as HTMLImageElement).src = '/api/placeholder/48/48'
+                        }}
                       />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-white font-medium text-sm uppercase tracking-wide truncate">
-                        {activity.playerName}
+                      <div className="text-white font-medium text-sm truncate">
+                        {moment.playerName}
+                      </div>
+                      <div className="text-gray-400 text-xs truncate">
+                        {moment.playDescription}
                       </div>
                     </div>
                   </div>
 
-                  {/* PRICE - Green text like NBA TopShot */}
+                  {/* SUPPLY */}
                   <div className="col-span-1 flex items-center">
-                    {activity.price ? (
-                      <span className="text-green-400 font-bold text-sm">
-                        {formatPrice(activity.price)}
-                      </span>
-                    ) : (
-                      <span className="text-gray-500 text-sm">—</span>
-                    )}
+                    <span className="text-white text-sm">{moment.supply.toLocaleString()}</span>
                   </div>
 
-                  {/* SERIAL - Rarity + Serial Number */}
-                  <div className="col-span-2 flex items-center">
-                    <div className="text-sm">
-                      <div className="text-white">
-                        {activity.rarity}
-                      </div>
-                      <div className="text-gray-400">
-                        #{activity.serialNumber}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* PARALLEL */}
+                  {/* LOW ASK */}
                   <div className="col-span-1 flex items-center">
-                    <span className="text-gray-500 text-sm">--</span>
-                  </div>
-
-                  {/* SET */}
-                  <div className="col-span-2 flex items-center">
-                    <span className="text-gray-300 text-sm">{activity.setName}</span>
-                  </div>
-
-                  {/* SERIES */}
-                  <div className="col-span-1 flex items-center">
-                    <span className="text-gray-300 text-sm">{activity.series}</span>
-                  </div>
-
-                  {/* BUYER */}
-                  <div className="col-span-1 flex items-center">
-                    <span className="text-blue-400 text-sm font-mono">
-                      @{activity.to.length > 10 ? `${activity.to.substring(0, 8)}...` : activity.to}
+                    <span className="text-green-400 font-bold text-sm">
+                      ${moment.lowAsk.toFixed(2)}
                     </span>
                   </div>
 
-                  {/* SELLER */}
+                  {/* HIGHEST OFFER */}
                   <div className="col-span-1 flex items-center">
-                    <span className="text-blue-400 text-sm font-mono">
-                      @{activity.from.length > 10 ? `${activity.from.substring(0, 8)}...` : activity.from}
-                    </span>
+                    <span className="text-white text-sm">${moment.highestOffer.toFixed(2)}</span>
                   </div>
 
-                  {/* DATE/TIME */}
+                  {/* OWNED */}
                   <div className="col-span-1 flex items-center">
-                    <span className="text-gray-400 text-xs">
-                      {formatRelativeTime(activity.timestamp)}
-                    </span>
+                    <span className="text-white text-sm">{moment.owned}</span>
                   </div>
 
-                  {/* TX - Transaction Link */}
+                  {/* IN PACKS */}
                   <div className="col-span-1 flex items-center">
-                    <ExternalLink className="h-4 w-4 text-gray-400 hover:text-white cursor-pointer" />
+                    <span className="text-white text-sm">{moment.inPacks.toLocaleString()}</span>
+                  </div>
+
+                  {/* BURNED */}
+                  <div className="col-span-1 flex items-center">
+                    <span className="text-white text-sm">{moment.burned}</span>
+                  </div>
+
+                  {/* LOCKED */}
+                  <div className="col-span-1 flex items-center">
+                    <span className="text-white text-sm">{moment.locked}</span>
+                  </div>
+
+                  {/* LISTED */}
+                  <div className="col-span-1 flex items-center">
+                    <span className="text-white text-sm">{moment.listed}</span>
+                  </div>
+
+                  {/* SALES */}
+                  <div className="col-span-1 flex items-center">
+                    <span className="text-white text-sm">{moment.sales}</span>
+                  </div>
+
+                  {/* BUY NOW */}
+                  <div className="col-span-1 flex items-center">
+                    <Button 
+                      size="sm" 
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
+                    >
+                      BUY NOW
+                    </Button>
                   </div>
                 </div>
               ))}
 
               {/* Empty State */}
-              {!loading && filteredActivities.length === 0 && !error && (
+              {!loading && filteredMoments.length === 0 && !error && (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
-                    <h3 className="text-lg font-medium text-gray-300 mb-2">No transactions found</h3>
-                    <p className="text-gray-500">Try adjusting your filters or check back later.</p>
+                    <h3 className="text-lg font-medium text-gray-300 mb-2">No moments found</h3>
+                    <p className="text-gray-500">Try adjusting your filters or search terms.</p>
                   </div>
                 </div>
               )}
