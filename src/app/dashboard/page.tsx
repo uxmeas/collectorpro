@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
@@ -157,7 +157,7 @@ const MomentTable = ({ moments }: { moments: any[] }) => (
   </div>
 )
 
-export default function PremiumDashboard() {
+function PremiumDashboardContent() {
   const searchParams = useSearchParams()
   const walletAddress = searchParams.get('wallet') || 'demo-wallet'
   const { totalValue, totalProfit, roi, loading } = usePortfolioMetrics(walletAddress)
@@ -451,5 +451,13 @@ export default function PremiumDashboard() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function PremiumDashboard() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <PremiumDashboardContent />
+    </Suspense>
   )
 } 

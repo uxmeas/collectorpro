@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, Filter, Grid, List, TrendingUp, TrendingDown, ExternalLink, Heart, AlertCircle, Star, X, Menu, BarChart3 } from 'lucide-react'
 import { Button } from "@/components/ui/Button"
@@ -13,7 +13,7 @@ import { discoveryService, DiscoveryMoment, DiscoveryFilters, MarketAnalytics } 
 import { UnifiedTable } from '@/components/table/UnifiedTable'
 import { momentTableColumns, MomentGridCard, MomentListItem } from '@/components/table/configs/MomentTableConfig'
 
-export default function DiscoverPage() {
+function DiscoverPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -528,4 +528,12 @@ export default function DiscoverPage() {
       </CardContent>
     )
   }
+}
+
+export default function DiscoverPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <DiscoverPageContent />
+    </Suspense>
+  )
 } 
