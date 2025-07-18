@@ -585,23 +585,6 @@ export default function ActivityPage() {
           {/* MOMENTS Tab */}
           {activeTab === 'MOMENTS' && (
             <div className="w-full">
-              {/* Fixed Table Header - Never stacks */}
-              <div className="sticky top-0 bg-gray-900 border-b border-gray-700 z-10">
-                <div className="grid grid-cols-12 gap-1 px-2 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-max">
-                  <div className="col-span-2 min-w-[200px]">MOMENT</div>
-                  <div className="col-span-1 min-w-[80px]">SUPPLY</div>
-                  <div className="col-span-1 min-w-[90px]">LOW ASK</div>
-                  <div className="col-span-1 min-w-[120px]">HIGHEST OFFER</div>
-                  <div className="col-span-1 min-w-[70px]">OWNED</div>
-                  <div className="col-span-1 min-w-[90px]">IN PACKS</div>
-                  <div className="col-span-1 min-w-[70px]">BURNED</div>
-                  <div className="col-span-1 min-w-[70px]">LOCKED</div>
-                  <div className="col-span-1 min-w-[70px]">LISTED</div>
-                  <div className="col-span-1 min-w-[70px]">SALES</div>
-                  <div className="col-span-1 min-w-[100px]"></div>
-                </div>
-              </div>
-
               {/* Loading State */}
               {loading && moments.length === 0 && (
                 <div className="flex items-center justify-center py-12">
@@ -612,104 +595,152 @@ export default function ActivityPage() {
                 </div>
               )}
 
-              {/* Scrollable Table Body - Maintains columns */}
-              <div className="overflow-x-auto">
-                <div className="min-w-max">
-                  {filteredMoments.map((moment) => (
-                    <div 
-                      key={moment.id}
-                      className="grid grid-cols-12 gap-1 px-2 py-3 border-b border-gray-800 hover:bg-gray-800/50 transition-colors min-w-max"
-                    >
-                      {/* MOMENT - Player photo and name */}
-                      <div className="col-span-2 flex items-center gap-3 min-w-[200px]">
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
-                          <img 
-                            src={moment.playerImage}
-                            alt={moment.playerName}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/api/placeholder/48/48'
-                            }}
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-white font-medium text-sm truncate">
-                            {moment.playerName}
-                          </div>
-                          <div className="text-gray-400 text-xs truncate">
-                            {moment.playDescription}
-                          </div>
-                        </div>
-                      </div>
+              {/* Proper HTML Table - Never stacks */}
+              {!loading || moments.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1200px] border-collapse">
+                    {/* Table Header */}
+                    <thead className="sticky top-0 bg-gray-900 border-b border-gray-700 z-10">
+                      <tr>
+                        <th className="text-left py-3 px-4 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[250px]">
+                          MOMENT
+                        </th>
+                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
+                          SUPPLY
+                        </th>
+                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
+                          LOW ASK
+                        </th>
+                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[120px]">
+                          HIGHEST OFFER
+                        </th>
+                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
+                          OWNED
+                        </th>
+                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
+                          IN PACKS
+                        </th>
+                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
+                          BURNED
+                        </th>
+                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
+                          LOCKED
+                        </th>
+                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
+                          LISTED
+                        </th>
+                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[80px]">
+                          SALES
+                        </th>
+                        <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[120px]">
+                          ACTION
+                        </th>
+                      </tr>
+                    </thead>
 
-                      {/* SUPPLY */}
-                      <div className="col-span-1 flex items-center min-w-[80px]">
-                        <span className="text-white text-sm">{moment.supply.toLocaleString()}</span>
-                      </div>
-
-                      {/* LOW ASK - With price change indicator */}
-                      <div className="col-span-1 flex items-center gap-1 min-w-[90px]">
-                        <span className="text-green-400 font-bold text-sm">
-                          ${moment.lowAsk.toFixed(2)}
-                        </span>
-                        {moment.priceChange && (
-                          <span className={cn(
-                            "text-xs",
-                            moment.priceChange > 0 ? "text-green-400" : "text-red-400"
-                          )}>
-                            {moment.priceChange > 0 ? "↗" : "↘"}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* HIGHEST OFFER */}
-                      <div className="col-span-1 flex items-center min-w-[120px]">
-                        <span className="text-white text-sm">${moment.highestOffer.toFixed(2)}</span>
-                      </div>
-
-                      {/* OWNED */}
-                      <div className="col-span-1 flex items-center min-w-[70px]">
-                        <span className="text-white text-sm">{moment.owned}</span>
-                      </div>
-
-                      {/* IN PACKS */}
-                      <div className="col-span-1 flex items-center min-w-[90px]">
-                        <span className="text-white text-sm">{moment.inPacks.toLocaleString()}</span>
-                      </div>
-
-                      {/* BURNED */}
-                      <div className="col-span-1 flex items-center min-w-[70px]">
-                        <span className="text-white text-sm">{moment.burned}</span>
-                      </div>
-
-                      {/* LOCKED */}
-                      <div className="col-span-1 flex items-center min-w-[70px]">
-                        <span className="text-white text-sm">{moment.locked}</span>
-                      </div>
-
-                      {/* LISTED */}
-                      <div className="col-span-1 flex items-center min-w-[70px]">
-                        <span className="text-white text-sm">{moment.listed}</span>
-                      </div>
-
-                      {/* SALES */}
-                      <div className="col-span-1 flex items-center min-w-[70px]">
-                        <span className="text-white text-sm">{moment.sales}</span>
-                      </div>
-
-                      {/* BUY NOW */}
-                      <div className="col-span-1 flex items-center min-w-[100px]">
-                        <Button 
-                          size="sm" 
-                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
+                    {/* Table Body */}
+                    <tbody>
+                      {filteredMoments.map((moment) => (
+                        <tr 
+                          key={moment.id}
+                          className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
                         >
-                          BUY NOW
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                          {/* MOMENT - Player photo and name */}
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
+                                <img 
+                                  src={moment.playerImage}
+                                  alt={moment.playerName}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = '/api/placeholder/48/48'
+                                  }}
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-white font-medium text-sm">
+                                  {moment.playerName}
+                                </div>
+                                <div className="text-gray-400 text-xs">
+                                  {moment.playDescription}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* SUPPLY */}
+                          <td className="py-3 px-2">
+                            <span className="text-white text-sm">{moment.supply.toLocaleString()}</span>
+                          </td>
+
+                          {/* LOW ASK - With price change indicator */}
+                          <td className="py-3 px-2">
+                            <div className="flex items-center gap-1">
+                              <span className="text-green-400 font-bold text-sm">
+                                ${moment.lowAsk.toFixed(2)}
+                              </span>
+                              {moment.priceChange && (
+                                <span className={cn(
+                                  "text-xs",
+                                  moment.priceChange > 0 ? "text-green-400" : "text-red-400"
+                                )}>
+                                  {moment.priceChange > 0 ? "↗" : "↘"}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* HIGHEST OFFER */}
+                          <td className="py-3 px-2">
+                            <span className="text-white text-sm">${moment.highestOffer.toFixed(2)}</span>
+                          </td>
+
+                          {/* OWNED */}
+                          <td className="py-3 px-2">
+                            <span className="text-white text-sm">{moment.owned}</span>
+                          </td>
+
+                          {/* IN PACKS */}
+                          <td className="py-3 px-2">
+                            <span className="text-white text-sm">{moment.inPacks.toLocaleString()}</span>
+                          </td>
+
+                          {/* BURNED */}
+                          <td className="py-3 px-2">
+                            <span className="text-white text-sm">{moment.burned}</span>
+                          </td>
+
+                          {/* LOCKED */}
+                          <td className="py-3 px-2">
+                            <span className="text-white text-sm">{moment.locked}</span>
+                          </td>
+
+                          {/* LISTED */}
+                          <td className="py-3 px-2">
+                            <span className="text-white text-sm">{moment.listed}</span>
+                          </td>
+
+                          {/* SALES */}
+                          <td className="py-3 px-2">
+                            <span className="text-white text-sm">{moment.sales}</span>
+                          </td>
+
+                          {/* BUY NOW */}
+                          <td className="py-3 px-2">
+                            <Button 
+                              size="sm" 
+                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
+                            >
+                              BUY NOW
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
+              ) : null}
 
               {/* Empty State */}
               {!loading && filteredMoments.length === 0 && !error && (
@@ -726,101 +757,122 @@ export default function ActivityPage() {
           {/* PACKS Tab */}
           {activeTab === 'PACKS' && (
             <div className="w-full">
-              {/* Pack Activity Header */}
-              <div className="sticky top-0 bg-gray-900 border-b border-gray-700 z-10">
-                <div className="grid grid-cols-8 gap-2 px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  <div className="col-span-2">PACK</div>
-                  <div className="col-span-1">PRICE</div>
-                  <div className="col-span-1">MOMENTS</div>
-                  <div className="col-span-1">RARITY</div>
-                  <div className="col-span-1">OPENED BY</div>
-                  <div className="col-span-1">TIME</div>
-                  <div className="col-span-1">CONTENTS</div>
+              {/* Proper HTML Table for Packs */}
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1000px] border-collapse">
+                  {/* Pack Activity Header */}
+                  <thead className="sticky top-0 bg-gray-900 border-b border-gray-700 z-10">
+                    <tr>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[250px]">
+                        PACK
+                      </th>
+                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
+                        PRICE
+                      </th>
+                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
+                        MOMENTS
+                      </th>
+                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
+                        RARITY
+                      </th>
+                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[120px]">
+                        OPENED BY
+                      </th>
+                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[100px]">
+                        TIME
+                      </th>
+                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[200px]">
+                        CONTENTS
+                      </th>
+                    </tr>
+                  </thead>
+
+                  {/* Pack Activity Rows */}
+                  <tbody>
+                    {packs.map((pack) => (
+                      <tr 
+                        key={pack.id}
+                        className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
+                      >
+                        {/* PACK */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
+                              <img 
+                                src={pack.packImage}
+                                alt={pack.packName}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-white font-medium text-sm">
+                                {pack.packName}
+                              </div>
+                              <div className="text-gray-400 text-xs">
+                                {pack.series}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* PRICE */}
+                        <td className="py-3 px-2">
+                          <span className="text-green-400 font-bold text-sm">
+                            ${pack.price.toFixed(2)}
+                          </span>
+                        </td>
+
+                        {/* MOMENTS */}
+                        <td className="py-3 px-2">
+                          <span className="text-white text-sm">{pack.momentsCount}</span>
+                        </td>
+
+                        {/* RARITY */}
+                        <td className="py-3 px-2">
+                          <span className={cn(
+                            "text-sm font-medium",
+                            pack.rarity === 'Ultimate' ? "text-purple-400" :
+                            pack.rarity === 'Premium' ? "text-yellow-400" : "text-gray-300"
+                          )}>
+                            {pack.rarity}
+                          </span>
+                        </td>
+
+                        {/* OPENED BY */}
+                        <td className="py-3 px-2">
+                          <span className="text-blue-400 text-sm font-mono">
+                            {pack.openedBy}
+                          </span>
+                        </td>
+
+                        {/* TIME */}
+                        <td className="py-3 px-2">
+                          <span className="text-gray-400 text-xs">
+                            {formatRelativeTime(pack.timestamp)}
+                          </span>
+                        </td>
+
+                        {/* CONTENTS */}
+                        <td className="py-3 px-2">
+                          <div className="text-xs text-gray-300">
+                            {pack.contents.join(', ')}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pack Empty State */}
+              {packs.length === 0 && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <h3 className="text-lg font-medium text-gray-300 mb-2">No pack activity</h3>
+                    <p className="text-gray-500">Pack openings will appear here in real-time.</p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Pack Activity Rows */}
-              <div className="min-h-[400px]">
-                {packs.map((pack) => (
-                  <div 
-                    key={pack.id}
-                    className="grid grid-cols-8 gap-2 px-4 py-3 border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
-                  >
-                    {/* PACK */}
-                    <div className="col-span-2 flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
-                        <img 
-                          src={pack.packImage}
-                          alt={pack.packName}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-white font-medium text-sm truncate">
-                          {pack.packName}
-                        </div>
-                        <div className="text-gray-400 text-xs truncate">
-                          {pack.series}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* PRICE */}
-                    <div className="col-span-1 flex items-center">
-                      <span className="text-green-400 font-bold text-sm">
-                        ${pack.price.toFixed(2)}
-                      </span>
-                    </div>
-
-                    {/* MOMENTS */}
-                    <div className="col-span-1 flex items-center">
-                      <span className="text-white text-sm">{pack.momentsCount}</span>
-                    </div>
-
-                    {/* RARITY */}
-                    <div className="col-span-1 flex items-center">
-                      <span className={cn(
-                        "text-sm font-medium",
-                        pack.rarity === 'Ultimate' ? "text-purple-400" :
-                        pack.rarity === 'Premium' ? "text-yellow-400" : "text-gray-300"
-                      )}>
-                        {pack.rarity}
-                      </span>
-                    </div>
-
-                    {/* OPENED BY */}
-                    <div className="col-span-1 flex items-center">
-                      <span className="text-blue-400 text-sm font-mono">
-                        {pack.openedBy}
-                      </span>
-                    </div>
-
-                    {/* TIME */}
-                    <div className="col-span-1 flex items-center">
-                      <span className="text-gray-400 text-xs">
-                        {formatRelativeTime(pack.timestamp)}
-                      </span>
-                    </div>
-
-                    {/* CONTENTS */}
-                    <div className="col-span-1 flex items-center">
-                      <div className="text-xs text-gray-300 truncate">
-                        {pack.contents.join(', ')}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Pack Empty State */}
-                {packs.length === 0 && (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="text-center">
-                      <h3 className="text-lg font-medium text-gray-300 mb-2">No pack activity</h3>
-                      <p className="text-gray-500">Pack openings will appear here in real-time.</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           )}
 
