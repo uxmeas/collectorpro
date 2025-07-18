@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/Button"
-import Input from "@/components/ui/Input"
+import { Input } from "@/components/ui/Input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
